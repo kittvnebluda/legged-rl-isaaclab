@@ -349,3 +349,18 @@ class UnitreeGo1EnvCfg(ManagerBasedRLEnvCfg):
         self.rewards.dof_acc_l2.weight = -2.5e-7
 
         self.curriculum.terrain_levels = None
+
+
+@configclass
+class UnitreeGo1EnvCfg_PLAY(UnitreeGo1EnvCfg):
+    def __post_init__(self):
+        super().__post_init__()
+
+        # make a smaller scene for play
+        self.scene.num_envs = 50
+        self.scene.env_spacing = 2.5
+        # disable randomization for play
+        self.observations.policy.enable_corruption = False
+        # remove random pushing event
+        self.events.push_robot = None
+        self.events.base_external_force_torque = None
