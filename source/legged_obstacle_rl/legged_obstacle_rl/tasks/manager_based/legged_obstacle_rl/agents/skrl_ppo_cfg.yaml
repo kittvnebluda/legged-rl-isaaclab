@@ -67,6 +67,7 @@ agent:
     experiment_name: ""
     write_interval: 1000
     checkpoint_interval: 20000
+    store_separately: True
 
 # Sequential trainer
 # https://skrl.readthedocs.io/en/latest/api/trainers/sequential.html

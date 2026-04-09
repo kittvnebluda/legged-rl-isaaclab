@@ -184,7 +184,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, expe
         if not resume_path:
             print("[INFO] Unfortunately a pre-trained checkpoint is currently unavailable for this task.")
             return
-    elif args_cli.checkpoint:
+    elif args_cli.checkpoint and ("agent" in args_cli.checkpoint or "policy" in args_cli.checkpoint):
         resume_path = os.path.abspath(args_cli.checkpoint)
     else:
         resume_path = get_checkpoint_path(
@@ -235,6 +235,12 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, expe
     print(f"[INFO] Loading model checkpoint from: {resume_path}")
     runner.agent.load(resume_path)
     runner.agent.set_running_mode("eval")
+
+    print("[INFO] Policy device:", runner.agent.policy.device)
+    print(
+        "[INFO] State preprocessor mean shape:",
+        runner.agent._state_preprocessor.running_mean.shape if runner.agent._state_preprocessor else "None",
+    )
 
     # simulate environment
     obs, _ = env.reset()
