@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools<82.0.0", "wheel", "toml"]
+build-backend = "setuptools.build_meta"
+
+[tool.ruff]
+line-length = 100
+
+[tool.pyright]
+extraPaths = [
+    "/home/litt/IsaacLab/source/isaaclab/",
+    "/home/litt/IsaacLab/source/isaaclab_tasks/",
+    "/home/litt/IsaacLab/source/isaaclab_assets/",
+    "/home/litt/IsaacLab/source/isaaclab_contrib/",
+    "/home/litt/IsaacLab/source/isaaclab_mimic/",
+    "/home/litt/IsaacLab/source/isaaclab_rl/",
+]
