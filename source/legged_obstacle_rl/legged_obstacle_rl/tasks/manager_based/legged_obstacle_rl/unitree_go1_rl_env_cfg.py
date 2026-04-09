@@ -345,7 +345,7 @@ class UnitreeGo1EnvCfg(ManagerBasedRLEnvCfg):
         self.rewards.dof_torques_l2.weight = -0.0002
         self.rewards.track_lin_vel_xy_exp.weight = 1.5
         self.rewards.track_ang_vel_z_exp.weight = 0.75
-        self.rewards.track_height.weight = -5.0
+        self.rewards.track_height.weight = -10.0
         self.rewards.dof_acc_l2.weight = -2.5e-7
 
         self.curriculum.terrain_levels = None

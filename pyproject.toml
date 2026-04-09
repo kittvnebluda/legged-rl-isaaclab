@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 [tool.ruff]
-line-length = 100
+line-length = 120
 target-version = "py310"
 
 # Exclude directories
@@ -112,7 +112,9 @@ extraPaths = [
     "/home/litt/IsaacLab/source/isaaclab_contrib/",
     "/home/litt/IsaacLab/source/isaaclab_mimic/",
     "/home/litt/IsaacLab/source/isaaclab_rl/",
+    "./typings/",
 ]
+
 typeCheckingMode = "basic"
 pythonVersion = "3.11"
 pythonPlatform = "Linux"

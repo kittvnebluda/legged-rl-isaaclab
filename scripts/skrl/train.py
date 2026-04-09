@@ -130,6 +130,7 @@ from datetime import datetime
 import gymnasium as gym
 import skrl
 from packaging import version
+from skrl.trainers.torch import SequentialTrainer
 
 MIN_SKRL_VERSION = "1.4.3"
 if version.parse(skrl.__version__) < version.parse(MIN_SKRL_VERSION):
@@ -166,21 +167,17 @@ import legged_obstacle_rl.tasks  # noqa: F401
 
 if args_cli.agent is None:
     algorithm = args_cli.algorithm.lower()
-    agent_cfg_entry_point = (
-        "skrl_cfg_entry_point" if algorithm in ["ppo"] else f"skrl_{algorithm}_cfg_entry_point"
-    )
+    agent_cfg_entry_point = "skrl_cfg_entry_point" if algorithm in ["ppo"] else f"skrl_{algorithm}_cfg_entry_point"
 else:
     agent_cfg_entry_point = args_cli.agent
     algorithm = agent_cfg_entry_point.split("_cfg")[0].split("skrl_")[-1].lower()
 
 
 @hydra_task_config(args_cli.task, agent_cfg_entry_point)
-def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agent_cfg: dict):
+def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, cfg: dict):
     """Train with skrl agent."""
     # override configurations with non-hydra CLI arguments
-    env_cfg.scene.num_envs = (
-        args_cli.num_envs if args_cli.num_envs is not None else env_cfg.scene.num_envs
-    )
+    env_cfg.scene.num_envs = args_cli.num_envs if args_cli.num_envs is not None else env_cfg.scene.num_envs
     env_cfg.sim.device = args_cli.device if args_cli.device is not None else env_cfg.sim.device
 
     # check for invalid combination of CPU device with distributed training
@@ -196,8 +193,8 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
 
     # max iterations for training
     if args_cli.max_iterations:
-        agent_cfg["trainer"]["timesteps"] = args_cli.max_iterations * agent_cfg["agent"]["rollouts"]
-    agent_cfg["trainer"]["close_environment_at_exit"] = False
+        cfg["trainer"]["timesteps"] = args_cli.max_iterations * cfg["agent"]["rollouts"]
+    cfg["trainer"]["close_environment_at_exit"] = False
 
     # configure the ML framework into the global skrl variable
     if args_cli.ml_framework.startswith("jax"):
@@ -208,11 +205,11 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         args_cli.seed = random.randint(0, 10000)
 
     # set the agent and environment seed from command line
-    agent_cfg["seed"] = args_cli.seed if args_cli.seed is not None else agent_cfg["seed"]
-    env_cfg.seed = agent_cfg["seed"]
+    cfg["seed"] = args_cli.seed if args_cli.seed is not None else cfg["seed"]
+    env_cfg.seed = cfg["seed"]
 
     # specify directory for logging experiments
-    log_root_path = os.path.join("logs", "skrl", agent_cfg["agent"]["experiment"]["directory"])
+    log_root_path = os.path.join("logs", "skrl", cfg["agent"]["experiment"]["directory"])
     log_root_path = os.path.abspath(log_root_path)
     print(f"[INFO] Logging experiment in directory: {log_root_path}")
 
@@ -222,17 +219,17 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     # The Ray Tune workflow extracts experiment name using the logging line below, hence,
     # do not change it (see PR #2346, comment-2819298849)
     print(f"Exact experiment name requested from command line: {log_dir}")
-    if agent_cfg["agent"]["experiment"]["experiment_name"]:
-        log_dir += f"_{agent_cfg['agent']['experiment']['experiment_name']}"
+    if cfg["agent"]["experiment"]["experiment_name"]:
+        log_dir += f"_{cfg['agent']['experiment']['experiment_name']}"
     # set directory into agent config
-    agent_cfg["agent"]["experiment"]["directory"] = log_root_path
-    agent_cfg["agent"]["experiment"]["experiment_name"] = log_dir
+    cfg["agent"]["experiment"]["directory"] = log_root_path
+    cfg["agent"]["experiment"]["experiment_name"] = log_dir
     # update log_dir
     log_dir = os.path.join(log_root_path, log_dir)
 
     # dump the configuration into log-directory
     dump_yaml(os.path.join(log_dir, "params", "env.yaml"), env_cfg)
-    dump_yaml(os.path.join(log_dir, "params", "agent.yaml"), agent_cfg)
+    dump_yaml(os.path.join(log_dir, "params", "agent.yaml"), cfg)
 
     # get checkpoint path (to resume training)
     resume_path = retrieve_file_path(args_cli.checkpoint) if args_cli.checkpoint else None
@@ -270,13 +267,81 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     start_time = time.time()
 
     # wrap around environment for skrl
-    env = SkrlVecEnvWrapper(
-        env, ml_framework=args_cli.ml_framework
-    )  # same as: `wrap_env(env, wrapper="auto")`
+    env = SkrlVecEnvWrapper(env, ml_framework=args_cli.ml_framework)
 
     # configure and instantiate the skrl runner
     # https://skrl.readthedocs.io/en/latest/api/utils/runner.html
-    runner = Runner(env, agent_cfg)
+    runner = Runner(env, cfg)
+
+    # set custom logging
+    agent = runner.agent
+
+    def custom_logs(*, timestep, timesteps):
+        try:
+            if timestep % cfg["agent"]["experiment"]["write_interval"] == 0:
+                if agent._state_preprocessor:
+                    agent.track_data("Scalers / State_Mean", agent._state_preprocessor.running_mean.mean().item())
+                    agent.track_data("Scalers / State_Var", agent._state_preprocessor.running_variance.mean().item())
+                if agent._value_preprocessor:
+                    agent.track_data("Scalers / Value_Mean", agent._value_preprocessor.running_mean.mean().item())
+                    agent.track_data("Scalers / Value_Var", agent._value_preprocessor.running_variance.mean().item())
+        except Exception as e:
+            print(f"[WARNING] Custom logging failed: {e}")
+        agent._original_post_interaction(timestep, timesteps)
+
+    agent._original_post_interaction = agent.post_interaction
+    agent.post_interaction = custom_logs
+
+    def log_all_hparams():
+        """Flatten and log env_cfg + agent_cfg to TensorBoard HParams."""
+        hparams = {}
+
+        def flatten_cfg(cfg_obj, prefix=""):
+            if hasattr(cfg_obj, "__dict__") or isinstance(cfg_obj, dict):
+                items = cfg_obj.__dict__.items() if hasattr(cfg_obj, "__dict__") else cfg_obj.items()
+                for key, value in items:
+                    if key.startswith("_") or callable(value):
+                        continue
+
+                    full_key = f"{prefix}{key}" if prefix else key
+                    if key == "network" and isinstance(value, list):
+                        for i, layer in enumerate(value):
+                            if isinstance(layer, dict):
+                                hparams[f"{full_key}.{i}.name"] = layer.get("name")
+                                hparams[f"{full_key}.{i}.input"] = str(layer.get("input"))
+                                hparams[f"{full_key}.{i}.layers"] = str(layer.get("layers"))
+                                hparams[f"{full_key}.{i}.activations"] = layer.get("activations")
+
+                    if isinstance(value, (int, float, bool, str)):
+                        hparams[full_key] = value
+                    elif (hasattr(value, "__dict__") or isinstance(cfg_obj, dict)) and not isinstance(
+                        value, type
+                    ):  # nested configclass
+                        flatten_cfg(value, prefix=f"{full_key}.")
+                    elif (
+                        isinstance(value, (list, tuple))
+                        and len(value) > 0
+                        and isinstance(value[0], (int, float, str, bool))
+                    ):
+                        hparams[full_key] = str(value)  # store lists as string
+                    else:
+                        hparams[full_key] = str(value)  # fallback to string
+
+        flatten_cfg(env_cfg, prefix="env.")
+        flatten_cfg(cfg, prefix="skrl.")
+
+        try:
+            writer = agent.writer
+            writer.add_hparams(
+                hparam_dict=hparams,
+                metric_dict={"Episode / Total timesteps (mean)": 0.0},
+                run_name=".",
+            )
+            print(f"[INFO] Logged {len(hparams)} hyperparameters to TensorBoard HParams dashboard.")
+        except Exception as e:
+            print(f"[WARNING] Failed to log hparams: {e}")
+
+    log_all_hparams()
 
     # load checkpoint (if specified)
     if resume_path:
