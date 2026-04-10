@@ -130,7 +130,6 @@ from datetime import datetime
 import gymnasium as gym
 import skrl
 from packaging import version
-from skrl.trainers.torch import SequentialTrainer
 
 MIN_SKRL_VERSION = "1.4.3"
 if version.parse(skrl.__version__) < version.parse(MIN_SKRL_VERSION):
@@ -142,8 +141,10 @@ if version.parse(skrl.__version__) < version.parse(MIN_SKRL_VERSION):
 
 if args_cli.ml_framework.startswith("torch"):
     from skrl.utils.runner.torch import Runner
+    from skrl.agents.torch import Agent
 elif args_cli.ml_framework.startswith("jax"):
     from skrl.utils.runner.jax import Runner
+    from skrl.agents.jax import Agent
 
 from isaaclab.envs import (
     DirectMARLEnv,
@@ -264,8 +265,6 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, cfg:
         print_dict(video_kwargs, nesting=4)
         env = gym.wrappers.RecordVideo(env, **video_kwargs)
 
-    start_time = time.time()
-
     # wrap around environment for skrl
     env = SkrlVecEnvWrapper(env, ml_framework=args_cli.ml_framework)
 
@@ -274,7 +273,21 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, cfg:
     runner = Runner(env, cfg)
 
     # set custom logging
-    agent = runner.agent
+    add_custom_logs(runner.agent)
+    log_all_hparams(runner.agent, env_cfg, cfg)
+
+    # load checkpoint (if specified)
+    if resume_path:
+        print(f"[INFO] Loading model checkpoint from: {resume_path}")
+        runner.agent.load(resume_path)
+
+    start_time = time.time()
+    runner.run()
+    print(f"Training time: {round(time.time() - start_time, 2)} seconds")
+    env.close()
+
+
+def add_custom_logs(agent: Agent):
 
     def custom_logs(*, timestep, timesteps):
         # try:
@@ -292,65 +305,55 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, cfg:
     agent._original_post_interaction = agent.post_interaction
     agent.post_interaction = custom_logs
 
-    def log_all_hparams():
-        """Flatten and log env_cfg + agent_cfg to TensorBoard HParams."""
-        hparams = {}
 
-        def flatten_cfg(cfg_obj, prefix=""):
-            if hasattr(cfg_obj, "__dict__") or isinstance(cfg_obj, dict):
-                items = cfg_obj.__dict__.items() if hasattr(cfg_obj, "__dict__") else cfg_obj.items()
-                for key, value in items:
-                    if key.startswith("_") or callable(value):
-                        continue
+def log_all_hparams(agent: Agent, env_cfg, cfg):
+    """Flatten and log env_cfg + agent_cfg to TensorBoard HParams."""
+    hparams = {}
 
-                    full_key = f"{prefix}{key}" if prefix else key
-                    if key == "network" and isinstance(value, list):
-                        for i, layer in enumerate(value):
-                            if isinstance(layer, dict):
-                                hparams[f"{full_key}.{i}.name"] = layer.get("name")
-                                hparams[f"{full_key}.{i}.input"] = str(layer.get("input"))
-                                hparams[f"{full_key}.{i}.layers"] = str(layer.get("layers"))
-                                hparams[f"{full_key}.{i}.activations"] = layer.get("activations")
+    def flatten_cfg(cfg_obj, prefix=""):
+        if hasattr(cfg_obj, "__dict__") or isinstance(cfg_obj, dict):
+            items = cfg_obj.__dict__.items() if hasattr(cfg_obj, "__dict__") else cfg_obj.items()
+            for key, value in items:
+                if key.startswith("_") or callable(value):
+                    continue
 
-                    if isinstance(value, (int, float, bool, str)):
-                        hparams[full_key] = value
-                    elif (hasattr(value, "__dict__") or isinstance(cfg_obj, dict)) and not isinstance(
-                        value, type
-                    ):  # nested configclass
-                        flatten_cfg(value, prefix=f"{full_key}.")
-                    elif (
-                        isinstance(value, (list, tuple))
-                        and len(value) > 0
-                        and isinstance(value[0], (int, float, str, bool))
-                    ):
-                        hparams[full_key] = str(value)  # store lists as string
-                    else:
-                        hparams[full_key] = str(value)  # fallback to string
+                full_key = f"{prefix}{key}" if prefix else key
+                if key == "network" and isinstance(value, list):
+                    for i, layer in enumerate(value):
+                        if isinstance(layer, dict):
+                            hparams[f"{full_key}.{i}.name"] = layer.get("name")
+                            hparams[f"{full_key}.{i}.input"] = str(layer.get("input"))
+                            hparams[f"{full_key}.{i}.layers"] = str(layer.get("layers"))
+                            hparams[f"{full_key}.{i}.activations"] = layer.get("activations")
 
-        flatten_cfg(env_cfg, prefix="env.")
-        flatten_cfg(cfg, prefix="skrl.")
+                if isinstance(value, (int, float, bool, str)):
+                    hparams[full_key] = value
+                elif (hasattr(value, "__dict__") or isinstance(cfg_obj, dict)) and not isinstance(
+                    value, type
+                ):  # nested configclass
+                    flatten_cfg(value, prefix=f"{full_key}.")
+                elif (
+                    isinstance(value, (list, tuple))
+                    and len(value) > 0
+                    and isinstance(value[0], (int, float, str, bool))
+                ):
+                    hparams[full_key] = str(value)  # store lists as string
+                else:
+                    hparams[full_key] = str(value)  # fallback to string
 
-        try:
-            writer = agent.writer
-            writer.add_hparams(
-                hparam_dict=hparams,
-                metric_dict={"Episode / Total timesteps (mean)": 0.0},
-                run_name=".",
-            )
-            print(f"[INFO] Logged {len(hparams)} hyperparameters to TensorBoard HParams dashboard.")
-        except Exception as e:
-            print(f"[WARNING] Failed to log hparams: {e}")
+    flatten_cfg(env_cfg, prefix="env.")
+    flatten_cfg(cfg, prefix="skrl.")
 
-    log_all_hparams()
-
-    # load checkpoint (if specified)
-    if resume_path:
-        print(f"[INFO] Loading model checkpoint from: {resume_path}")
-        runner.agent.load(resume_path)
-
-    runner.run()
-    print(f"Training time: {round(time.time() - start_time, 2)} seconds")
-    env.close()
+    try:
+        writer = agent.writer
+        writer.add_hparams(
+            hparam_dict=hparams,
+            metric_dict={"Episode / Total timesteps (mean)": 0.0},
+            run_name=".",
+        )
+        print(f"[INFO] Logged {len(hparams)} hyperparameters to TensorBoard HParams dashboard.")
+    except Exception as e:
+        print(f"[WARNING] Failed to log hparams: {e}")
 
 
 if __name__ == "__main__":

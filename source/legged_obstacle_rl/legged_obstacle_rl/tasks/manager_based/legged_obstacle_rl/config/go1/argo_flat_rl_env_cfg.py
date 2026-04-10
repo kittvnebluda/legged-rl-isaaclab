@@ -20,7 +20,7 @@ from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR, ISAACLAB_NUCLEUS_DIR
 from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 from isaaclab_assets.robots.unitree import UNITREE_GO1_CFG
 
-from . import mdp
+from legged_obstacle_rl.tasks.manager_based.legged_obstacle_rl import mdp
 
 ##
 # Scene definition
@@ -291,7 +291,7 @@ class CurriculumCfg:
 
 
 @configclass
-class UnitreeGo1EnvCfg(ManagerBasedRLEnvCfg):
+class Go1ArgoFlatEnvCfg(ManagerBasedRLEnvCfg):
     scene: MySceneCfg = MySceneCfg(num_envs=4096, env_spacing=2.5)
 
     observations: ObservationsCfg = ObservationsCfg()
@@ -352,7 +352,7 @@ class UnitreeGo1EnvCfg(ManagerBasedRLEnvCfg):
 
 
 @configclass
-class UnitreeGo1EnvCfg_PLAY(UnitreeGo1EnvCfg):
+class Go1ArgoFlatEnvCfg_PLAY(Go1ArgoFlatEnvCfg):
     def __post_init__(self):
         super().__post_init__()
 

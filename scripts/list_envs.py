@@ -46,9 +46,7 @@ def main():
 
     index = 0
     for task_spec in gym.registry.values():
-        if "Diploma-" in task_spec.id and (
-            args_cli.keyword is None or args_cli.keyword in task_spec.id
-        ):
+        if "LORL-" in task_spec.id and (args_cli.keyword is None or args_cli.keyword in task_spec.id):
             table.add_row(
                 [
                     index + 1,
