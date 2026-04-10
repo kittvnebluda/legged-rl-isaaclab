@@ -277,16 +277,16 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, cfg:
     agent = runner.agent
 
     def custom_logs(*, timestep, timesteps):
-        try:
-            if timestep % cfg["agent"]["experiment"]["write_interval"] == 0:
-                if agent._state_preprocessor:
-                    agent.track_data("Scalers / State_Mean", agent._state_preprocessor.running_mean.mean().item())
-                    agent.track_data("Scalers / State_Var", agent._state_preprocessor.running_variance.mean().item())
-                if agent._value_preprocessor:
-                    agent.track_data("Scalers / Value_Mean", agent._value_preprocessor.running_mean.mean().item())
-                    agent.track_data("Scalers / Value_Var", agent._value_preprocessor.running_variance.mean().item())
-        except Exception as e:
-            print(f"[WARNING] Custom logging failed: {e}")
+        # try:
+        #     if timestep % cfg["agent"]["experiment"]["write_interval"] == 0:
+        #         if agent._state_preprocessor:
+        #             agent.track_data("Scalers / State_Mean", agent._state_preprocessor.running_mean.mean().item())
+        #             agent.track_data("Scalers / State_Var", agent._state_preprocessor.running_variance.mean().item())
+        #         if agent._value_preprocessor:
+        #             agent.track_data("Scalers / Value_Mean", agent._value_preprocessor.running_mean.mean().item())
+        #             agent.track_data("Scalers / Value_Var", agent._value_preprocessor.running_variance.mean().item())
+        # except Exception as e:
+        #     print(f"[WARNING] Custom logging failed: {e}")
         agent._original_post_interaction(timestep, timesteps)
 
     agent._original_post_interaction = agent.post_interaction

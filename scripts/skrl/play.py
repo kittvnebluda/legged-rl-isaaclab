@@ -151,7 +151,7 @@ else:
 
 
 @hydra_task_config(args_cli.task, agent_cfg_entry_point)
-def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, experiment_cfg: dict):
+def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, cfg: dict):
     """Play with skrl agent."""
     # grab task name for checkpoint path
     task_name = args_cli.task.split(":")[-1]
@@ -170,11 +170,11 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, expe
         args_cli.seed = random.randint(0, 10000)
 
     # set the agent and environment seed from command line
-    experiment_cfg["seed"] = args_cli.seed if args_cli.seed is not None else experiment_cfg["seed"]
-    env_cfg.seed = experiment_cfg["seed"]
+    cfg["seed"] = args_cli.seed if args_cli.seed is not None else cfg["seed"]
+    env_cfg.seed = cfg["seed"]
 
     # specify directory for logging experiments (load checkpoint)
-    log_root_path = os.path.join("logs", "skrl", experiment_cfg["agent"]["experiment"]["directory"])
+    log_root_path = os.path.join("logs", "skrl", cfg["agent"]["experiment"]["directory"])
     log_root_path = os.path.abspath(log_root_path)
     print(f"[INFO] Loading experiment from directory: {log_root_path}")
 
@@ -227,20 +227,14 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, expe
 
     # configure and instantiate the skrl runner
     # https://skrl.readthedocs.io/en/latest/api/utils/runner.html
-    experiment_cfg["trainer"]["close_environment_at_exit"] = False
-    experiment_cfg["agent"]["experiment"]["write_interval"] = 0  # don't log to TensorBoard
-    experiment_cfg["agent"]["experiment"]["checkpoint_interval"] = 0  # don't generate checkpoints
-    runner = Runner(env, experiment_cfg)
+    cfg["trainer"]["close_environment_at_exit"] = False
+    cfg["agent"]["experiment"]["write_interval"] = 0  # don't log to TensorBoard
+    cfg["agent"]["experiment"]["checkpoint_interval"] = 0  # don't generate checkpoints
+    runner = Runner(env, cfg)
 
     print(f"[INFO] Loading model checkpoint from: {resume_path}")
     runner.agent.load(resume_path)
     runner.agent.set_running_mode("eval")
-
-    print("[INFO] Policy device:", runner.agent.policy.device)
-    print(
-        "[INFO] State preprocessor mean shape:",
-        runner.agent._state_preprocessor.running_mean.shape if runner.agent._state_preprocessor else "None",
-    )
 
     # simulate environment
     obs, _ = env.reset()
