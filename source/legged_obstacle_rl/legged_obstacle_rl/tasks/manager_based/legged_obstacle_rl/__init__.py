@@ -19,7 +19,6 @@ gym.register(
     kwargs={
         "env_cfg_entry_point": f"{__name__}.unitree_go1_rl_env_cfg:UnitreeGo1EnvCfg",
         "skrl_cfg_entry_point": f"{agents.__name__}:skrl_ppo_cfg.yaml",
-        "sb3_cfg_entry_point": f"{agents.__name__}:sb3_ppo_cfg.yaml",
     },
 )
 
@@ -30,6 +29,5 @@ gym.register(
     kwargs={
         "env_cfg_entry_point": f"{__name__}.unitree_go1_rl_env_cfg:UnitreeGo1EnvCfg_PLAY",
         "skrl_cfg_entry_point": f"{agents.__name__}:skrl_ppo_cfg.yaml",
-        "sb3_cfg_entry_point": f"{agents.__name__}:sb3_ppo_cfg.yaml",
     },
 )
