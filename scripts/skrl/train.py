@@ -129,6 +129,7 @@ from datetime import datetime
 
 import gymnasium as gym
 import skrl
+import torch
 from packaging import version
 
 MIN_SKRL_VERSION = "1.4.3"
@@ -140,11 +141,11 @@ if version.parse(skrl.__version__) < version.parse(MIN_SKRL_VERSION):
     exit()
 
 if args_cli.ml_framework.startswith("torch"):
-    from skrl.utils.runner.torch import Runner
     from skrl.agents.torch import Agent
+    from skrl.utils.runner.torch import Runner
 elif args_cli.ml_framework.startswith("jax"):
-    from skrl.utils.runner.jax import Runner
     from skrl.agents.jax import Agent
+    from skrl.utils.runner.jax import Runner
 
 from isaaclab.envs import (
     DirectMARLEnv,
@@ -273,7 +274,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, cfg:
     runner = Runner(env, cfg)
 
     # set custom logging
-    add_custom_logs(runner.agent)
+    add_custom_logs(runner, env, 1000)
     log_all_hparams(runner.agent, env_cfg, cfg)
 
     # load checkpoint (if specified)
@@ -287,23 +288,22 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, cfg:
     env.close()
 
 
-def add_custom_logs(agent: Agent):
+def add_custom_logs(runner: Runner, env, log_period: int):
 
     def custom_logs(*, timestep, timesteps):
-        # try:
-        #     if timestep % cfg["agent"]["experiment"]["write_interval"] == 0:
-        #         if agent._state_preprocessor:
-        #             agent.track_data("Scalers / State_Mean", agent._state_preprocessor.running_mean.mean().item())
-        #             agent.track_data("Scalers / State_Var", agent._state_preprocessor.running_variance.mean().item())
-        #         if agent._value_preprocessor:
-        #             agent.track_data("Scalers / Value_Mean", agent._value_preprocessor.running_mean.mean().item())
-        #             agent.track_data("Scalers / Value_Var", agent._value_preprocessor.running_variance.mean().item())
-        # except Exception as e:
-        #     print(f"[WARNING] Custom logging failed: {e}")
-        agent._original_post_interaction(timestep, timesteps)
+        try:
+            if timestep % log_period == 0:
+                if getattr(env.scene.terrain, "terrain_levels", None) is not None:
+                    runner.agent.track_data(
+                        "Info / Curriculum / terrain_levels",
+                        env.scene.terrain.terrain_levels.mean(dtype=torch.float32).item(),
+                    )
+        except Exception as e:
+            print(f"[WARNING] Custom logging failed: {e}")
+        runner.agent._original_post_interaction(timestep, timesteps)
 
-    agent._original_post_interaction = agent.post_interaction
-    agent.post_interaction = custom_logs
+    runner.agent._original_post_interaction = runner.agent.post_interaction
+    runner.agent.post_interaction = custom_logs
 
 
 def log_all_hparams(agent: Agent, env_cfg, cfg):
@@ -346,11 +346,20 @@ def log_all_hparams(agent: Agent, env_cfg, cfg):
 
     try:
         writer = agent.writer
-        writer.add_hparams(
-            hparam_dict=hparams,
-            metric_dict={"Episode / Total timesteps (mean)": 0.0},
-            run_name=".",
+
+        from torch.utils.tensorboard.summary import hparams as hp
+
+        exp, ssi, sei = hp(
+            hparams,
+            metric_dict={
+                "Episode / Total timesteps (mean)": 0.0,
+                "Info / Curriculum / terrain_levels": 0.0,
+            },
         )
+
+        writer.file_writer.add_summary(exp)
+        writer.file_writer.add_summary(ssi)
+        writer.file_writer.add_summary(sei)
         print(f"[INFO] Logged {len(hparams)} hyperparameters to TensorBoard HParams dashboard.")
     except Exception as e:
         print(f"[WARNING] Failed to log hparams: {e}")

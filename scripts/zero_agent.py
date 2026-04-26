@@ -30,6 +30,11 @@ parser.add_argument(
     default=None,
     help="Name of the task.",
 )
+parser.add_argument(
+    "--print_obs",
+    action="store_true",
+    help="Print observations.",
+)
 
 AppLauncher.add_app_launcher_args(parser)
 args_cli = parser.parse_args()
@@ -63,10 +68,10 @@ def main():
     env.reset()
     while simulation_app.is_running():
         with torch.inference_mode():
-            # compute zero actions
             actions = torch.zeros(env.action_space.shape, device=env.unwrapped.device)
-            # apply actions
-            env.step(actions)
+            obs, _, _, _, _ = env.step(actions)
+            if args_cli.print_obs:
+                print(obs)
 
     env.close()
 

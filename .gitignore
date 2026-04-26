@@ -16,11 +16,13 @@
 
 # Python
 .DS_Store
+.python-version
 **/*.egg-info/
 **/__pycache__/
 **/.pytest_cache/
 **/*.pyc
 **/*.pb
+typings
 
 # Docker/Singularity
 **/*.sif
@@ -73,6 +75,3 @@ tests/
 # TacSL sensor
 **/tactile_record/*
 **/gelsight_r15_data/*
-
-# Pyenv
-.python-version

@@ -133,6 +133,7 @@ from isaaclab.envs import (
     ManagerBasedRLEnvCfg,
     multi_agent_to_single_agent,
 )
+from isaaclab.managers import SceneEntityCfg
 from isaaclab.utils.dict import print_dict
 
 from isaaclab_rl.skrl import SkrlVecEnvWrapper
@@ -197,75 +198,72 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, cfg:
     # set the log directory for the environment (works for all environment types)
     env_cfg.log_dir = log_dir
 
-    # create isaac environment
-    env = gym.make(args_cli.task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None)
+    with gym.make(args_cli.task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None) as env:
+        if isinstance(env.unwrapped, DirectMARLEnv) and algorithm in ["ppo"]:
+            env = multi_agent_to_single_agent(env)
 
-    # convert to single-agent instance if required by the RL algorithm
-    if isinstance(env.unwrapped, DirectMARLEnv) and algorithm in ["ppo"]:
-        env = multi_agent_to_single_agent(env)
+        try:
+            dt = env.step_dt
+        except AttributeError:
+            dt = env.unwrapped.step_dt
 
-    # get environment (step) dt for real-time evaluation
-    try:
-        dt = env.step_dt
-    except AttributeError:
-        dt = env.unwrapped.step_dt
-
-    # wrap for video recording
-    if args_cli.video:
-        video_kwargs = {
-            "video_folder": os.path.join(log_dir, "videos", "play"),
-            "step_trigger": lambda step: step == 0,
-            "video_length": args_cli.video_length,
-            "disable_logger": True,
-        }
-        print("[INFO] Recording videos during training.")
-        print_dict(video_kwargs, nesting=4)
-        env = gym.wrappers.RecordVideo(env, **video_kwargs)
-
-    # wrap around environment for skrl
-    env = SkrlVecEnvWrapper(env, ml_framework=args_cli.ml_framework)
-
-    # configure and instantiate the skrl runner
-    # https://skrl.readthedocs.io/en/latest/api/utils/runner.html
-    cfg["trainer"]["close_environment_at_exit"] = False
-    cfg["agent"]["experiment"]["write_interval"] = 0  # don't log to TensorBoard
-    cfg["agent"]["experiment"]["checkpoint_interval"] = 0  # don't generate checkpoints
-    runner = Runner(env, cfg)
-
-    print(f"[INFO] Loading model checkpoint from: {resume_path}")
-    runner.agent.load(resume_path)
-    runner.agent.set_running_mode("eval")
-
-    # simulate environment
-    obs, _ = env.reset()
-    timestep = 0
-    while simulation_app.is_running():
-        start_time = time.time()
-
-        with torch.inference_mode():
-            # agent stepping
-            outputs = runner.agent.act(obs, timestep=0, timesteps=0)
-            # - multi-agent (deterministic) actions
-            if hasattr(env, "possible_agents"):
-                actions = {a: outputs[-1][a].get("mean_actions", outputs[0][a]) for a in env.possible_agents}
-            # - single-agent (deterministic) actions
-            else:
-                actions = outputs[-1].get("mean_actions", outputs[0])
-            # env stepping
-            obs, _, _, _, _ = env.step(actions)
-
+        # wrap for video recording
         if args_cli.video:
-            timestep += 1
-            # exit the play loop after recording one video
-            if timestep == args_cli.video_length:
-                break
+            video_kwargs = {
+                "video_folder": os.path.join(log_dir, "videos", "play"),
+                "step_trigger": lambda step: step == 0,
+                "video_length": args_cli.video_length,
+                "disable_logger": True,
+            }
+            print("[INFO] Recording videos during training.")
+            print_dict(video_kwargs, nesting=4)
+            env = gym.wrappers.RecordVideo(env, **video_kwargs)
 
-        # time delay for real-time evaluation
-        sleep_time = dt - (time.time() - start_time)
-        if args_cli.real_time and sleep_time > 0:
-            time.sleep(sleep_time)
+        # wrap around environment for skrl
+        env = SkrlVecEnvWrapper(env, ml_framework=args_cli.ml_framework)
 
-    env.close()
+        # configure and instantiate the skrl runner
+        # https://skrl.readthedocs.io/en/latest/api/utils/runner.html
+        cfg["trainer"]["close_environment_at_exit"] = False
+        cfg["agent"]["experiment"]["write_interval"] = 0  # don't log to TensorBoard
+        cfg["agent"]["experiment"]["checkpoint_interval"] = 0  # don't generate checkpoints
+        runner = Runner(env, cfg)
+
+        print(f"[INFO] Loading model checkpoint from: {resume_path}")
+        runner.agent.load(resume_path)
+        runner.agent.set_running_mode("eval")
+
+        print(f"[INFO] Joint Names: {env.scene['robot'].joint_names}")
+        print("[DEBUG] State preprocessor:", getattr(runner.agent, "_state_preprocessor", None))
+
+        obs, _ = env.reset()
+        timestep = 0
+        torch.set_printoptions(threshold=float("inf"))
+        while simulation_app.is_running():
+            start_time = time.time()
+
+            with torch.inference_mode():
+                # agent stepping
+                outputs = runner.agent.act(obs, timestep=0, timesteps=0)
+                # - multi-agent (deterministic) actions
+                if hasattr(env, "possible_agents"):
+                    actions = {a: outputs[-1][a].get("mean_actions", outputs[0][a]) for a in env.possible_agents}
+                # - single-agent (deterministic) actions
+                else:
+                    actions = outputs[-1].get("mean_actions", outputs[0])
+                # env stepping
+                obs, _, _, _, _ = env.step(actions)
+
+            if args_cli.video:
+                timestep += 1
+                # exit the play loop after recording one video
+                if timestep == args_cli.video_length:
+                    break
+
+            # time delay for real-time evaluation
+            sleep_time = dt - (time.time() - start_time)
+            if args_cli.real_time and sleep_time > 0:
+                time.sleep(sleep_time)
 
 
 if __name__ == "__main__":

@@ -3,9 +3,5 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-"""
-Python module serving as a project/extension template.
-"""
 
-# Register Gym environments.
 from .tasks import *
