@@ -96,14 +96,6 @@ class Go1ArgoEnv(MujocoEnv):
         self.GRAVITY_VEC = gravity_dir
         self.MAX_ACTIONS_LEN = 15
 
-        self.min_z = 0.1
-        self.max_z = 1.0
-        self.min_z_cmd = 0.2
-        self.max_z_cmd = 0.38
-        self.max_roll = np.deg2rad(36)
-        self.max_pitch = np.deg2rad(36)
-        self.max_ep_time = 10
-
         self.actions = [isaac_home_jpos.copy()]
         self.vel_cmd = np.array([0.2, 0.0, 0.0], dtype=np.float32)  # vx,vy,wz
         self.z_cmd = 0.3

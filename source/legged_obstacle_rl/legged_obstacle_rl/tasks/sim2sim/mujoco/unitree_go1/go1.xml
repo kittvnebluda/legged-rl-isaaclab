@@ -6,19 +6,19 @@
     <default>
         <default class="go1">
             <geom friction="0.6" margin="0.001" condim="1" />
-            <joint axis="0 1 0" damping="5" armature="0.01" frictionloss="0.2" />
-            <position kp="25" kv="1.5" forcerange="-23.7 23.7" />
+            <joint axis="0 1 0" damping="2" armature="0.01" frictionloss="0.2" />
+            <position forcerange="-23.7 23.7" />
             <default class="abduction">
-                <joint axis="1 0 0" damping="5" range="-0.863 0.863" />
-                <position ctrlrange="-0.863 0.863" />
+                <joint axis="1 0 0" damping="2" range="-0.863 0.863" />
+                <position kp="10" kv="0.2" ctrlrange="-0.863 0.863" />
             </default>
             <default class="hip">
                 <joint range="-0.686 4.501" />
-                <position ctrlrange="-0.686 4.501" />
+                <position kp="15" kv="0.5" ctrlrange="-0.686 4.501" />
             </default>
             <default class="knee">
                 <joint range="-2.818 -0.888" />
-                <position forcerange="-35.55 35.55" ctrlrange="-2.818 -0.888" />
+                <position kp="25" kv="1.0" forcerange="-35.55 35.55" ctrlrange="-2.818 -0.888" />
             </default>
             <default class="visual">
                 <geom type="mesh" contype="0" conaffinity="0" group="2" material="dark" />
