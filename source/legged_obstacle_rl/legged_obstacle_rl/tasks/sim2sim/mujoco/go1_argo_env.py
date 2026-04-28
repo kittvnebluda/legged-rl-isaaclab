@@ -2,10 +2,15 @@ from copy import copy
 from importlib.resources import files
 from typing import Literal
 
+import torch
+
 import mujoco
 import numpy as np
 from gymnasium.envs.mujoco.mujoco_env import MujocoEnv
 from gymnasium.spaces import Box
+from isaaclab.actuators import ActuatorNetMLP
+from isaaclab.utils.types import ArticulationActions
+from isaaclab_assets.robots.unitree import GO1_ACTUATOR_CFG
 from numpy.typing import NDArray
 
 ZERO_ACTION = np.zeros(12, dtype=np.float32)
@@ -78,9 +83,7 @@ class Go1ArgoEnv(MujocoEnv):
         device: Literal["cpu", "cuda"] = "cpu",
         **kwargs,
     ):
-        xml_file = str(
-            files("legged_obstacle_rl").joinpath("tasks/sim2sim/mujoco/unitree_go1/scene.xml")
-        )
+        xml_file = str(files("legged_obstacle_rl").joinpath("tasks/sim2sim/mujoco/unitree_go1/scene.xml"))
         MujocoEnv.__init__(self, xml_file, frame_skip, observation_space=None, **kwargs)
 
         self.metadata = {"render_modes": ["human"], "render_fps": int(np.round(1.0 / self.dt))}
@@ -91,6 +94,10 @@ class Go1ArgoEnv(MujocoEnv):
         self._step_counter = 0
 
         gravity_dir = normalize(np.array([[0.0, 0.0, -9.81]], dtype=np.float32)).squeeze(0)
+
+        self.actuators = ActuatorNetMLP(
+            GO1_ACTUATOR_CFG, joint_names=isaac_joint_names, joint_ids=slice(None), num_envs=1, device="cpu"
+        )
 
         # Initialize constants
         self.GRAVITY_VEC = gravity_dir
@@ -103,9 +110,7 @@ class Go1ArgoEnv(MujocoEnv):
         self.action_space = Box(low=-np.inf, high=np.inf, shape=(12,), dtype=np.float32)
 
         self.obs_size = 49
-        self.observation_space = Box(
-            low=-np.inf, high=np.inf, shape=(self.obs_size,), dtype=np.float32
-        )
+        self.observation_space = Box(low=-np.inf, high=np.inf, shape=(self.obs_size,), dtype=np.float32)
 
     def step(
         self, action: NDArray[np.float32]
@@ -139,37 +144,43 @@ class Go1ArgoEnv(MujocoEnv):
 
     def do_simulation(self, ctrl, n_frames) -> None:
         if np.array(ctrl).shape != (self.model.nu,):
-            raise ValueError(
-                f"Action dimension mismatch. Expected {(self.model.nu,)}, found {np.array(ctrl).shape}"
-            )
-        target_pos_mj = ctrl[isaac_to_mujoco_joints]
-        self.data.ctrl[:] = target_pos_mj
+            raise ValueError(f"Action dimension mismatch. Expected {(self.model.nu,)}, found {np.array(ctrl).shape}")
 
         for _ in range(n_frames):
+            q = self.data.qpos[7:]
+            v = self.data.qvel[6:]
+
+            target_articulation = self.actuators.compute(
+                ArticulationActions(joint_positions=torch.from_numpy(ctrl).float().unsqueeze(0)),
+                torch.from_numpy(q[mujoco_to_isaac_joints]).float().unsqueeze(0),
+                torch.from_numpy(v[mujoco_to_isaac_joints]).float().unsqueeze(0),
+            )
+
+            if target_articulation.joint_efforts is None:
+                raise ValueError("None in joint effors")
+
+            efforts_mj = target_articulation.joint_efforts.squeeze(0).detach().numpy()[isaac_to_mujoco_joints]
+            self.data.ctrl[:] = efforts_mj
+
             mujoco.mj_step(self.model, self.data)
 
             self._step_counter += 1
-            if self._step_counter % 20 == 0:  # Log every 0.1s (at 50 Hz control)
-                q = self.data.qpos[7:]  # Current joint positions
-                error = target_pos_mj - q  # Position error
-                # fmt: off
+            if self._step_counter % 20 == 0:
+                error = efforts_mj - q
                 print(f"\n[Step {self._step_counter}] Joint Position Errors (target - actual):")
                 print(f"{'Joint':<20} {'Target':>8} {'Actual':>8} {'Error':>8} {'Status'}")
                 print("-" * 55)
                 for i, name in enumerate(mujoco_joint_names):
                     status = "✓" if abs(error[i]) < 0.02 else "⚠" if abs(error[i]) < 0.1 else "✗"
-                    print(f"{name:<20} {target_pos_mj[i]:8.4f} {q[i]:8.4f} {error[i]:8.4f} {status}")
+                    print(f"{name:<20} {efforts_mj[i]:8.4f} {q[i]:8.4f} {error[i]:8.4f} {status}")
                 print(f"\nMax |error|: {np.abs(error).max():.4f} rad  |  Mean |error|: {np.abs(error).mean():.4f} rad")
-                # fmt: on
                 print(f"\n[Step {self._step_counter}] Policy Actions:")
                 for i, name in enumerate(isaac_joint_names):
                     print(f"{name:<20}: {ctrl[i]:7.4f}")
 
                 self.print_debug()
 
-                print(
-                    f"Time: {self.data.time:.4f} | Base Z: {self.data.qpos[2]:.3f} | VX: {self.data.qvel[0]:.3f}"
-                )
+                print(f"Time: {self.data.time:.4f} | Base Z: {self.data.qpos[2]:.3f} | VX: {self.data.qvel[0]:.3f}")
 
     def _get_obs(self):
         qpos = self.data.qpos.flatten()
@@ -195,12 +206,10 @@ class Go1ArgoEnv(MujocoEnv):
         return obs
 
     def reset_model(self):
-        self.prev_action = np.zeros((12,), dtype=np.float32)
+        self.actions = [isaac_home_jpos.copy()]
         self._ep_start_time = copy(self.data.time)
 
-        qpos = np.concatenate(
-            [np.array([0, 0, 0.4, 1, 0, 0, 0]), isaac_home_jpos[isaac_to_mujoco_joints]]
-        )
+        qpos = np.concatenate([np.array([0, 0, 0.4, 1, 0, 0, 0]), isaac_home_jpos[isaac_to_mujoco_joints]])
         qvel = np.zeros(len(qpos) - 1)
         self.set_state(qpos, qvel)
 
@@ -227,9 +236,7 @@ class Go1ArgoHEnv(Go1ArgoEnv):
     def __init__(self, frame_skip: int = 10, device: Literal["cpu", "cuda"] = "cpu", **kwargs):
         super().__init__(frame_skip, device, **kwargs)
         self.obs_size = 217
-        self.observation_space = Box(
-            low=-np.inf, high=np.inf, shape=(self.obs_size,), dtype=np.float32
-        )
+        self.observation_space = Box(low=-np.inf, high=np.inf, shape=(self.obs_size,), dtype=np.float32)
         self.actions = [ZERO_ACTION.copy() for _ in range(15)]
 
     def _get_obs(self):

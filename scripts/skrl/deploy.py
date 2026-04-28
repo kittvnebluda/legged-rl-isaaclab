@@ -4,6 +4,8 @@
 
 import argparse
 
+from isaaclab.app import AppLauncher
+
 parser = argparse.ArgumentParser(description="Deploy a checkpoint of an RL agent from skrl in MuJoCo.")
 parser.add_argument("--task", type=str, default=None, help="Name of the task.")
 parser.add_argument("--checkpoint", type=str, default=None, help="Path to model checkpoint.")
@@ -31,6 +33,9 @@ parser.add_argument(
 
 args_cli = parser.parse_args()
 
+app_launcher = AppLauncher(headless=True)
+simulation_app = app_launcher.app
+
 """Rest everything follows."""
 
 import contextlib
@@ -57,16 +62,9 @@ elif args_cli.ml_framework.startswith("jax"):
     from skrl.utils.runner.jax import Runner
 
 import legged_obstacle_rl.tasks  # noqa: F401
-import yaml
 from skrl.envs.wrappers.torch import wrap_env
 
-
-def load_yaml(filename: str) -> dict:
-    if not os.path.exists(filename):
-        raise FileNotFoundError(f"File not found: {filename}")
-    with open(filename) as f:
-        data = yaml.full_load(f)
-    return data
+from isaaclab.utils.io.yaml import load_yaml
 
 
 def main():
