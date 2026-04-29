@@ -133,7 +133,6 @@ from isaaclab.envs import (
     ManagerBasedRLEnvCfg,
     multi_agent_to_single_agent,
 )
-from isaaclab.managers import SceneEntityCfg
 from isaaclab.utils.dict import print_dict
 
 from isaaclab_rl.skrl import SkrlVecEnvWrapper
@@ -256,7 +255,6 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, cfg:
 
             if args_cli.video:
                 timestep += 1
-                # exit the play loop after recording one video
                 if timestep == args_cli.video_length:
                     break
 

@@ -10,6 +10,7 @@ parser = argparse.ArgumentParser(description="Deploy a checkpoint of an RL agent
 parser.add_argument("--task", type=str, default=None, help="Name of the task.")
 parser.add_argument("--checkpoint", type=str, default=None, help="Path to model checkpoint.")
 parser.add_argument("--config", type=str, default=None, help="Path to model's config.")
+parser.add_argument("--teleop", action="store_true", help="Keyboard teleoperation")
 parser.add_argument(
     "--ml_framework",
     type=str,
@@ -62,6 +63,7 @@ elif args_cli.ml_framework.startswith("jax"):
     from skrl.utils.runner.jax import Runner
 
 import legged_obstacle_rl.tasks  # noqa: F401
+from legged_obstacle_rl.tasks.sim2sim.teleop import start_teleop_thread, state
 from skrl.envs.wrappers.torch import wrap_env
 
 from isaaclab.utils.io.yaml import load_yaml
@@ -84,6 +86,11 @@ def main():
         resume_path = os.path.abspath(args_cli.checkpoint)
     else:
         print("[ERROR] Cannot load provided checkpoint")
+
+    # Teleoperation
+    if args_cli.teleop:
+        print("[INFO] Teleoperation enabled. Use WASD/QE/RF keys.")
+        start_teleop_thread()
 
     with gym.make(args_cli.task, render_mode="human") as env:
         try:
@@ -108,7 +115,7 @@ def main():
         print("[DEBUG] Time delta:", dt)
 
         obs, _ = env.reset()
-        while 1:
+        while not state.stop:
             start_time = time.time()
 
             with torch.inference_mode():
@@ -116,6 +123,14 @@ def main():
                 actions = outputs[-1].get("mean_actions", outputs[0])
                 # actions = torch.zeros(env.action_space.shape, device=env.unwrapped.device)
                 obs, _, _, _, _ = env.step(actions)
+
+            if args_cli.teleop:
+                env._unwrapped.vel_cmd[0] = state.lin_x
+                env._unwrapped.vel_cmd[1] = state.lin_y
+                env._unwrapped.vel_cmd[2] = state.ang_z
+                env._unwrapped.z_cmd = state.base_height
+
+            env._unwrapped.print_debug()
 
             sleep_time = dt - (time.time() - start_time)
             if args_cli.real_time and sleep_time > 0:
