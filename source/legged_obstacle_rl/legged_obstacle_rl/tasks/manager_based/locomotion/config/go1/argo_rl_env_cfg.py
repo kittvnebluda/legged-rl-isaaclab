@@ -14,16 +14,14 @@ class Go1ArgoEnvCfg(LocomotionRLEnvCfg):
         self.scene.terrain.terrain_type = "plane"
         self.scene.terrain.terrain_generator = None
 
-        self.events.physics_material.params["num_buckets"] = 50
-        self.events.physics_material.params["static_friction_range"] = (0.2, 1.0)
-        self.events.physics_material.params["dynamic_friction_range"] = (0.2, 1.0)
+        self.events.physics_material.params["static_friction_range"] = (0.6, 1.5)
+        self.events.physics_material.params["dynamic_friction_range"] = (0.6, 1.0)
 
-        self.events.base_com = None
         self.events.base_external_force_torque = None
 
         self.rewards.undesired_contacts = None
         self.rewards.terrain_levels_mean = None
-        self.rewards.track_height.weight = -20
+        self.rewards.track_height.weight = -10
 
         self.curriculum.terrain_levels = None
 
@@ -39,6 +37,12 @@ class Go1ArgoEnvCfg_PLAY(Go1ArgoEnvCfg):
         self.scene.env_spacing = 2.5
         # disable randomization for play
         self.observations.policy.enable_corruption = False
+        # disable pushes and CoM change
+        self.events.base_com = None
+        self.events.push_robot = None
+        # set good frictions
+        self.events.physics_material.params["static_friction_range"] = (0.8, 0.8)
+        self.events.physics_material.params["dynamic_friction_range"] = (0.6, 0.6)
 
 
 @configclass

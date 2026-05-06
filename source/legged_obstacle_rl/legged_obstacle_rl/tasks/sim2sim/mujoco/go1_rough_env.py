@@ -22,7 +22,7 @@ from legged_obstacle_rl.tasks.sim2sim.mujoco.utils import (
 )
 
 
-class Go1ArgoEnv(MujocoEnv):
+class Go1RoughEnv(MujocoEnv):
     metadata = {"render_modes": ["human"]}
 
     def __init__(
@@ -47,13 +47,20 @@ class Go1ArgoEnv(MujocoEnv):
 
         # Initialize constants
         self.MAX_ACTIONS_LEN = 15
+        self.HS_RESOLUTION = 0.1
+        self.HS_SIZE = (1.6, 1.0)
+        self.HS_OFFSET_Z = 20.0
+
+        x_range = np.arange(-self.HS_SIZE[0] / 2, self.HS_SIZE[0] / 2 + self.HS_RESOLUTION, self.HS_RESOLUTION)
+        y_range = np.arange(-self.HS_SIZE[1] / 2, self.HS_SIZE[1] / 2 + self.HS_RESOLUTION, self.HS_RESOLUTION)
+        self.hs_xv, self.hs_yv = np.meshgrid(x_range, y_range)
 
         self.vel_cmd = np.array([0.0, 0.0, 0.0], dtype=np.float32)  # vx,vy,wz
         self.z_cmd = 0.3
 
         self.action_space = Box(low=-np.inf, high=np.inf, shape=(12,), dtype=np.float32)
 
-        self.obs_size = 49
+        self.obs_size = 235
         self.observation_space = Box(low=-np.inf, high=np.inf, shape=(self.obs_size,), dtype=np.float32)
 
         self.reset_model()
@@ -123,12 +130,12 @@ class Go1ArgoEnv(MujocoEnv):
                 qvel[6:][mujoco_to_isaac_joints],
                 self.projected_gravity(),
                 self.vel_cmd,
-                [self.z_cmd],
                 self.actions[-1],
+                self.height_scan(),
             )
         ).astype(np.float32)
 
-        assert len(obs) == self.obs_size
+        assert len(obs) == self.obs_size, f"{len(obs)} does not equal to {self.obs_size}"
         return obs
 
     def reset_model(self):
@@ -164,42 +171,37 @@ class Go1ArgoEnv(MujocoEnv):
         q = self.data.qpos[3:7]  # (w, x, y, z)
         return quat_apply_inverse(q, GRAVITY_VEC)
 
+    def height_scan(self):
+        body_pos = self.data.xpos[self._main_body]
+        body_mat = self.data.xmat[self._main_body].reshape(3, 3)
 
-class Go1ArgoHEnv(Go1ArgoEnv):
-    def __init__(self, frame_skip: int = 10, device: Literal["cpu", "cuda"] = "cpu", **kwargs):
-        super().__init__(frame_skip, device, **kwargs)
-        self.obs_size = 217
-        self.observation_space = Box(low=-np.inf, high=np.inf, shape=(self.obs_size,), dtype=np.float32)
-        self.reset_model()
+        yaw = np.arctan2(body_mat[1, 0], body_mat[0, 0])
+        cos_y, sin_y = np.cos(yaw), np.sin(yaw)
+        yaw_mat = np.array([[cos_y, -sin_y, 0], [sin_y, cos_y, 0], [0, 0, 1]])
 
-    def _get_obs(self):
-        qpos = self.data.qpos.flatten()
-        qvel = self.data.qvel.flatten()
-        base_quat = qpos[3:7]
-        base_lin_vel = quat_apply_inverse(base_quat, qvel[:3])
-        base_ang_vel = qvel[3:6]
+        local_origins = np.stack(
+            [self.hs_xv.flatten(), self.hs_yv.flatten(), np.full_like(self.hs_xv.flatten(), self.HS_OFFSET_Z)], axis=-1
+        )
 
-        obs = np.concatenate(
-            (
-                -qpos[7:][mujoco_to_isaac_joints] + isaac_home_jpos,
-                base_lin_vel,
-                base_ang_vel,
-                qvel[6:][mujoco_to_isaac_joints],
-                self.projected_gravity(),
-                self.vel_cmd,
-                (self.z_cmd,),
-                np.concatenate(self.actions[-15:]),
+        world_origins = body_pos + local_origins @ yaw_mat.T
+
+        world_direction = np.array([0, 0, -1.0])
+
+        distances = []
+        geom_id = np.zeros(1, dtype=np.int32)
+        for origin in world_origins:
+            dist = mujoco.mj_ray(
+                self.model,
+                self.data,
+                origin,
+                world_direction,
+                np.array([1, 0, 0, 0, 0, 0], dtype=np.uint8),
+                1,
+                -1,
+                geom_id,
             )
-        ).astype(np.float32)
 
-        return obs
+            val = dist - self.HS_OFFSET_Z
+            distances.append(np.clip(val, -1.0, 1.0))
 
-    def reset_model(self):
-        self.actions = [ZERO_ACTION.copy() for _ in range(15)]
-        self._ep_start_time = copy(self.data.time)
-
-        qpos = np.concatenate([np.array([0, 0, 0.4, 1, 0, 0, 0]), isaac_home_jpos[isaac_to_mujoco_joints]])
-        qvel = np.zeros(len(qpos) - 1)
-        self.set_state(qpos, qvel)
-
-        return self._get_obs()
+        return np.array(distances)

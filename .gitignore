@@ -8,12 +8,6 @@
 **/*.dmp
 **/.thumbs
 
-# No USD files allowed in the repo
-**/*.usd
-**/*.usda
-**/*.usdc
-**/*.usdz
-
 # Python
 .DS_Store
 .python-version
@@ -65,9 +59,6 @@ _build
 
 # Teleop Recorded Dataset
 /datasets/
-
-# Tests
-tests/
 
 # Docker history
 .isaac-lab-docker-history

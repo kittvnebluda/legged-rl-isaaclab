@@ -65,30 +65,34 @@ install the library in editable mode using:
             python scripts/random_agent.py --task=<TASK_NAME>
             ```
 
-### Set up IDE (Optional)
+## MuJoCo
 
-To setup the IDE, please follow these instructions:
+To launch MuJoCo
 
-- Run VSCode Tasks, by pressing `Ctrl+Shift+P`, selecting `Tasks: Run Task` and running the `setup_python_env` in the drop down menu.
-  When running this task, you will be prompted to add the absolute path to your Isaac Sim installation.
-
-If everything executes correctly, it should create a file .python.env in the `.vscode` directory.
-The file contains the python paths to all the extensions provided by Isaac Sim and Omniverse.
-This helps in indexing all the python modules for intelligent suggestions while writing code.
-
-## Code formatting
-
-We have a pre-commit template to automatically format your code.
-To install pre-commit:
-
-```bash
-pip install pre-commit
+```sh
+pip install gymnasium[mujoco] skrl
 ```
 
-Then you can run pre-commit with:
+## Gazebo
 
-```bash
-pre-commit run --all-files
+```sh
+sudo apt-get update
+sudo apt-get install lsb-release wget gnupg
+
+sudo wget https://packages.osrfoundation.org/gazebo.gpg -O /usr/share/keyrings/pkgs-osrf-archive-keyring.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/pkgs-osrf-archive-keyring.gpg] http://packages.osrfoundation.org/gazebo/ubuntu-stable $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/gazebo-stable.list > /dev/null
+
+sudo apt-get update
+sudo apt-get install gz-harmonic ros-humble-ros-gzharmonic
+
+echo 'export GZ_VERSION=harmonic' >> ~/.bashrc
+source ~/.bashrc
+```
+
+Verify installation:
+
+```sh
+gz sim
 ```
 
 ## Troubleshooting
@@ -120,4 +124,3 @@ Some examples of packages that can likely be excluded are:
 "<path-to-isaac-sim>/extscache/omni.services.*"     // Services tools
 ...
 ```
-

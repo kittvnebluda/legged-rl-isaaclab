@@ -70,3 +70,12 @@ gym.register(
         "skrl_cfg_entry_point": f"{config.__name__}.go1.agents:skrl_rough_ppo_cfg.yaml",
     },
 )
+gym.register(
+    id="LORL-Go1Rough-RL-Play-ICRA-v0",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{config.__name__}.go1.rough_rl_env_cfg:Go1RoughEnvCfg_v0_PLAY_ICRA",
+        "skrl_cfg_entry_point": f"{config.__name__}.go1.agents:skrl_rough_ppo_cfg.yaml",
+    },
+)

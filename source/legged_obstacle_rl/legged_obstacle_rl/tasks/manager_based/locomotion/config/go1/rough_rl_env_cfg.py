@@ -1,21 +1,9 @@
-import math
-
 import isaaclab.sim as sim_utils
-from isaaclab.assets import ArticulationCfg, AssetBaseCfg
-from isaaclab.envs import ManagerBasedRLEnvCfg
-from isaaclab.managers import CurriculumTermCfg as CurrTerm
-from isaaclab.managers import EventTermCfg as EventTerm
+from isaaclab.assets import AssetBaseCfg
 from isaaclab.managers import ObservationGroupCfg as ObsGroup
 from isaaclab.managers import ObservationTermCfg as ObsTerm
-from isaaclab.managers import RewardTermCfg as RewTerm
 from isaaclab.managers import SceneEntityCfg
-from isaaclab.managers import TerminationTermCfg as DoneTerm
-from isaaclab.scene import InteractiveSceneCfg
-from isaaclab.sensors import ContactSensorCfg, RayCasterCfg, patterns
-from isaaclab.terrains import TerrainImporterCfg
-from isaaclab.terrains.config.rough import ROUGH_TERRAINS_CFG
 from isaaclab.utils import configclass
-from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR, ISAACLAB_NUCLEUS_DIR
 from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 from isaaclab_assets.robots.unitree import UNITREE_GO1_CFG
 
@@ -35,6 +23,8 @@ class Go1RoughEnvCfg_v0(LocomotionRLEnvCfg):
         self.scene.terrain.terrain_generator.sub_terrains["random_rough"].noise_step = 0.01
 
         self.events.base_com = None
+        self.events.physics_material.params["static_friction_range"] = (0.6, 1.5)
+        self.events.physics_material.params["dynamic_friction_range"] = (0.6, 1.0)
 
         self.rewards.undesired_contacts = None
         self.rewards.track_height = None
@@ -45,7 +35,7 @@ class Go1RoughEnvCfg_v0(LocomotionRLEnvCfg):
 
         self.commands.base_height = None
         self.commands.base_velocity.ranges.lin_vel_x = (-0.75, 0.75)
-        self.commands.base_velocity.ranges.lin_vel_y = (-0.1, 0.1)
+        self.commands.base_velocity.ranges.lin_vel_y = (-0.2, 0.2)
         self.commands.base_velocity.ranges.ang_vel_z = (-0.5, 0.5)
 
 
@@ -62,14 +52,50 @@ class Go1RoughEnvCfg_v0_PLAY(Go1RoughEnvCfg_v0):
         # reduce the number of terrains to save memory
         if self.scene.terrain.terrain_generator is not None:
             self.scene.terrain.terrain_generator.num_rows = 5
-            self.scene.terrain.terrain_generator.num_cols = 5
+            self.scene.terrain.terrain_generator.num_cols = 8
             self.scene.terrain.terrain_generator.curriculum = True
 
         # disable randomization for play
         self.observations.policy.enable_corruption = False
-        # remove random pushing event
-        self.events.base_external_force_torque = None
+
         self.events.push_robot = None
+        self.events.base_external_force_torque = None
+        self.events.physics_material.params["static_friction_range"] = (0.8, 0.8)
+        self.events.physics_material.params["dynamic_friction_range"] = (0.6, 0.6)
+
+
+@configclass
+class Go1RoughEnvCfg_v0_PLAY_ICRA(Go1RoughEnvCfg_v0):
+    def __post_init__(self):
+        super().__post_init__()
+        # make a smaller scene for play
+        self.scene.num_envs = 1
+        # disable randomization for play
+        self.observations.policy.enable_corruption = False
+        # disable reset, pushes and CoM change
+        self.events.reset_base = None
+        self.events.base_com = None
+        self.events.push_robot = None
+        self.events.base_external_force_torque = None
+        # set good frictions
+        self.events.physics_material.params["static_friction_range"] = (0.8, 0.8)
+        self.events.physics_material.params["dynamic_friction_range"] = (0.6, 0.6)
+        # turn off curriculum
+        self.curriculum.terrain_levels = None
+        self.rewards.terrain_levels_mean = None
+        # change map
+        self.scene.terrain = AssetBaseCfg(
+            prim_path="/World/ground",
+            spawn=sim_utils.UsdFileCfg(
+                usd_path="/home/litt/Projects/legged-rl-isaaclab/source/legged_obstacle_rl/legged_obstacle_rl/assets/icra_map_flat.usd",
+                collision_props=sim_utils.CollisionPropertiesCfg(contact_offset=0.1),
+            ),
+        )
+        self.scene.robot.init_state.pos = (6.0, -4.3, 0.4)
+        self.sim.physx.enable_ccd = True
+        # visuals
+        self.scene.height_scanner.debug_vis = True
+        self.commands.base_velocity.debug_vis = False
 
 
 @configclass
@@ -100,12 +126,8 @@ class ObservationsCfg:
             func=mdp.projected_gravity,
             noise=Unoise(n_min=-0.05, n_max=0.05),
         )
-        velocity_commands = ObsTerm(
-            func=mdp.generated_commands, params={"command_name": "base_velocity"}
-        )
-        height_command = ObsTerm(
-            func=mdp.generated_commands, params={"command_name": "base_height"}
-        )
+        velocity_commands = ObsTerm(func=mdp.generated_commands, params={"command_name": "base_velocity"})
+        height_command = ObsTerm(func=mdp.generated_commands, params={"command_name": "base_height"})
         actions = ObsTerm(func=mdp.last_action)
         height_scan = ObsTerm(
             func=mdp.height_scan,

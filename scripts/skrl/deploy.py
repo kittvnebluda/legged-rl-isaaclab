@@ -63,7 +63,7 @@ elif args_cli.ml_framework.startswith("jax"):
     from skrl.utils.runner.jax import Runner
 
 import legged_obstacle_rl.tasks  # noqa: F401
-from legged_obstacle_rl.tasks.sim2sim.teleop import start_teleop_thread, state
+from legged_obstacle_rl.teleop import start_teleop_thread, state
 from skrl.envs.wrappers.torch import wrap_env
 
 from isaaclab.utils.io.yaml import load_yaml

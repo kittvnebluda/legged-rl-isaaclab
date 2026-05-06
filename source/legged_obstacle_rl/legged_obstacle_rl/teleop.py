@@ -1,4 +1,3 @@
-import os
 import threading
 import time
 from dataclasses import dataclass
@@ -31,14 +30,14 @@ def teleop_backend(state_obj):
         return
 
     key_map = {
-        "KEY_W": ("lin_x", 0.1),
-        "KEY_S": ("lin_x", -0.1),
-        "KEY_A": ("lin_y", 0.1),
-        "KEY_D": ("lin_y", -0.1),
-        "KEY_Q": ("ang_z", 0.1),
-        "KEY_E": ("ang_z", -0.1),
-        "KEY_R": ("base_height", 0.01),
-        "KEY_F": ("base_height", -0.01),
+        "KEY_I": ("lin_x", 0.1),
+        "KEY_K": ("lin_x", -0.1),
+        "KEY_L": ("lin_y", 0.1),
+        "KEY_J": ("lin_y", -0.1),
+        "KEY_U": ("ang_z", 0.1),
+        "KEY_O": ("ang_z", -0.1),
+        "KEY_Y": ("base_height", 0.01),
+        "KEY_H": ("base_height", -0.01),
     }
 
     # Internal loop blocks until an event occurs
