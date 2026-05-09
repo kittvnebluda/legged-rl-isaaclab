@@ -1,11 +1,11 @@
 from isaaclab.utils import configclass
 from isaaclab_assets.robots.unitree import UNITREE_GO1_CFG
 
-from legged_obstacle_rl.tasks.manager_based.locomotion.locomotion_env_cfg import LocomotionRLEnvCfg
+from legged_obstacle_rl.tasks.manager_based.locomotion.velocity.velocity_env_cfg import VelocityRLEnvCfg
 
 
 @configclass
-class Go1ArgoEnvCfg(LocomotionRLEnvCfg):
+class Go1ArgoEnvCfg(VelocityRLEnvCfg):
     def __post_init__(self):
         super().__post_init__()
 

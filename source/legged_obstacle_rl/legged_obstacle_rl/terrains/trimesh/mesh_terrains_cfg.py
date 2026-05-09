@@ -15,5 +15,4 @@ class MeshDiamondWalkwayTerrainCfg(SubTerrainBaseCfg):
     # Height of the beams above the ground (in meters)
     beam_height: float = 0.2
 
-    # Size of the subterrain tile
-    size: tuple[float, float] = (4.0, 4.0)
+    grid_dims: tuple[int, int] = (2, 2)

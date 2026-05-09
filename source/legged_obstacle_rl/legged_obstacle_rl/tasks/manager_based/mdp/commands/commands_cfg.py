@@ -1,0 +1,65 @@
+from dataclasses import MISSING
+from math import pi
+
+from isaaclab.managers import CommandTermCfg
+from isaaclab.markers import VisualizationMarkersCfg
+from isaaclab.markers.config import BLUE_ARROW_X_MARKER_CFG, GREEN_ARROW_X_MARKER_CFG, SPHERE_MARKER_CFG
+from isaaclab.utils import configclass
+
+from .direction_command import UniformDirectionCommand
+from .height_command import UniformBodyHeightCommand
+
+
+@configclass
+class UniformDirectionCommandCfg(CommandTermCfg):
+    """Configuration for the uniform direction command generator."""
+
+    class_type: type = UniformDirectionCommand
+
+    asset_name: str = MISSING
+    """Name of the asset in the environment for which the commands are generated."""
+
+    rel_standing_envs: float = 0.0
+    """The sampled probability of environments that should be standing still. Defaults to 0.0."""
+
+    @configclass
+    class Ranges:
+        """Uniform distribution ranges for the direction commands."""
+
+        yaw: tuple[float, float] = (-pi, pi)
+        """Range for the yaw command (in rad)."""
+
+    ranges: Ranges = Ranges()
+    """Distribution ranges for the direction commands."""
+
+    goal_vel_visualizer_cfg: VisualizationMarkersCfg = GREEN_ARROW_X_MARKER_CFG.replace(
+        prim_path="/Visuals/Command/direction_goal"
+    )
+    """The configuration for the goal direction visualization marker. Defaults to GREEN_ARROW_X_MARKER_CFG."""
+
+    current_vel_visualizer_cfg: VisualizationMarkersCfg = BLUE_ARROW_X_MARKER_CFG.replace(
+        prim_path="/Visuals/Command/direction_current"
+    )
+    """The configuration for the current direction visualization marker. Defaults to BLUE_ARROW_X_MARKER_CFG."""
+
+    goal_vel_visualizer_cfg.markers["arrow"].scale = (0.5, 0.5, 0.5)
+    current_vel_visualizer_cfg.markers["arrow"].scale = (0.5, 0.5, 0.5)
+
+
+@configclass
+class UniformBodyHeightCommandCfg(CommandTermCfg):
+    class_type: type = UniformBodyHeightCommand
+
+    asset_name: str = "robot"
+    resampling_time_range: tuple[float, float] = (8.0, 12.0)
+    debug_vis: bool = True
+
+    marker_cfg = SPHERE_MARKER_CFG.replace(prim_path="/Visuals/Command/height_goal")
+
+    @configclass
+    class Ranges:
+        height: tuple[float, float] = MISSING
+        """Range for the height (in m)."""
+
+    ranges: Ranges = MISSING
+    """Distribution ranges for the height command."""

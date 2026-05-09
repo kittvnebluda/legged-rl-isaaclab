@@ -43,9 +43,7 @@ class UniformBodyHeightCommand(CommandTerm):
 
     def _resample_command(self, env_ids: Sequence[int]):
         min_h, max_h = self.cfg.ranges.height
-        self.height_command[env_ids, 0] = (
-            torch.rand(len(env_ids), device=self.device) * (max_h - min_h) + min_h
-        )
+        self.height_command[env_ids, 0] = torch.rand(len(env_ids), device=self.device) * (max_h - min_h) + min_h
 
     def _update_command(self):
         pass

@@ -5,7 +5,7 @@
 
 import gymnasium as gym
 
-from . import config
+from . import direction, velocity
 
 ##
 # Register Gym environments.
@@ -17,8 +17,8 @@ gym.register(
     entry_point="isaaclab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
-        "env_cfg_entry_point": f"{config.__name__}.go1.argo_rl_env_cfg:Go1ArgoEnvCfg",
-        "skrl_cfg_entry_point": f"{config.__name__}.go1.agents:skrl_argo_ppo_cfg.yaml",
+        "env_cfg_entry_point": f"{velocity.__name__}.go1.argo_rl_env_cfg:Go1ArgoEnvCfg",
+        "skrl_cfg_entry_point": f"{velocity.__name__}.go1.agents:skrl_argo_ppo_cfg.yaml",
     },
 )
 
@@ -27,8 +27,8 @@ gym.register(
     entry_point="isaaclab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
-        "env_cfg_entry_point": f"{config.__name__}.go1.argo_rl_env_cfg:Go1ArgoEnvCfg_PLAY",
-        "skrl_cfg_entry_point": f"{config.__name__}.go1.agents:skrl_argo_ppo_cfg.yaml",
+        "env_cfg_entry_point": f"{velocity.__name__}.go1.argo_rl_env_cfg:Go1ArgoEnvCfg_PLAY",
+        "skrl_cfg_entry_point": f"{velocity.__name__}.go1.agents:skrl_argo_ppo_cfg.yaml",
     },
 )
 
@@ -37,8 +37,8 @@ gym.register(
     entry_point="isaaclab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
-        "env_cfg_entry_point": f"{config.__name__}.go1.argo_rl_env_cfg:Go1ArgoHEnvCfg",
-        "skrl_cfg_entry_point": f"{config.__name__}.go1.agents:skrl_argo_ppo_cfg.yaml",
+        "env_cfg_entry_point": f"{velocity.__name__}.go1.argo_rl_env_cfg:Go1ArgoHEnvCfg",
+        "skrl_cfg_entry_point": f"{velocity.__name__}.go1.agents:skrl_argo_ppo_cfg.yaml",
     },
 )
 
@@ -47,8 +47,8 @@ gym.register(
     entry_point="isaaclab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
-        "env_cfg_entry_point": f"{config.__name__}.go1.argo_rl_env_cfg:Go1ArgoHEnvCfg_PLAY",
-        "skrl_cfg_entry_point": f"{config.__name__}.go1.agents:skrl_argo_ppo_cfg.yaml",
+        "env_cfg_entry_point": f"{velocity.__name__}.go1.argo_rl_env_cfg:Go1ArgoHEnvCfg_PLAY",
+        "skrl_cfg_entry_point": f"{velocity.__name__}.go1.agents:skrl_argo_ppo_cfg.yaml",
     },
 )
 gym.register(
@@ -56,8 +56,8 @@ gym.register(
     entry_point="isaaclab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
-        "env_cfg_entry_point": f"{config.__name__}.go1.rough_rl_env_cfg:Go1RoughEnvCfg_v0",
-        "skrl_cfg_entry_point": f"{config.__name__}.go1.agents:skrl_rough_ppo_cfg.yaml",
+        "env_cfg_entry_point": f"{velocity.__name__}.go1.rough_rl_env_cfg:Go1RoughEnvCfg_v0",
+        "skrl_cfg_entry_point": f"{velocity.__name__}.go1.agents:skrl_rough_ppo_cfg.yaml",
     },
 )
 
@@ -66,8 +66,8 @@ gym.register(
     entry_point="isaaclab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
-        "env_cfg_entry_point": f"{config.__name__}.go1.rough_rl_env_cfg:Go1RoughEnvCfg_v0_PLAY",
-        "skrl_cfg_entry_point": f"{config.__name__}.go1.agents:skrl_rough_ppo_cfg.yaml",
+        "env_cfg_entry_point": f"{velocity.__name__}.go1.rough_rl_env_cfg:Go1RoughEnvCfg_v0_PLAY",
+        "skrl_cfg_entry_point": f"{velocity.__name__}.go1.agents:skrl_rough_ppo_cfg.yaml",
     },
 )
 gym.register(
@@ -75,7 +75,35 @@ gym.register(
     entry_point="isaaclab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
-        "env_cfg_entry_point": f"{config.__name__}.go1.rough_rl_env_cfg:Go1RoughEnvCfg_v0_PLAY_ICRA",
-        "skrl_cfg_entry_point": f"{config.__name__}.go1.agents:skrl_rough_ppo_cfg.yaml",
+        "env_cfg_entry_point": f"{velocity.__name__}.go1.rough_rl_env_cfg:Go1RoughEnvCfg_v0_PLAY_ICRA",
+        "skrl_cfg_entry_point": f"{velocity.__name__}.go1.agents:skrl_rough_ppo_cfg.yaml",
+    },
+)
+gym.register(
+    id="LORL-Go1Direction-RL-v0",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{direction.__name__}.go1.rough_rl_env_cfg:Go1RoughEnvCfg_v0",
+        "skrl_cfg_entry_point": f"{direction.__name__}.go1.agents:skrl_rough_ppo_cfg.yaml",
+    },
+)
+
+gym.register(
+    id="LORL-Go1Direction-RL-Play-v0",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{direction.__name__}.go1.rough_rl_env_cfg:Go1RoughEnvCfg_v0_PLAY",
+        "skrl_cfg_entry_point": f"{direction.__name__}.go1.agents:skrl_rough_ppo_cfg.yaml",
+    },
+)
+gym.register(
+    id="LORL-Go1Direction-RL-Play-ICRA-v0",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{direction.__name__}.go1.rough_rl_env_cfg:Go1RoughEnvCfg_v0_PLAY_ICRA",
+        "skrl_cfg_entry_point": f"{direction.__name__}.go1.agents:skrl_rough_ppo_cfg.yaml",
     },
 )
