@@ -7,103 +7,94 @@ import gymnasium as gym
 
 from . import direction, velocity
 
+
+def register_manager_based_env(id: str, env_cfg: str, skrl_cfg: str):
+    gym.register(
+        id=id,
+        entry_point="isaaclab.envs:ManagerBasedRLEnv",
+        disable_env_checker=True,
+        kwargs={"env_cfg_entry_point": env_cfg, "skrl_cfg_entry_point": skrl_cfg},
+    )
+
+
 ##
 # Register Gym environments.
+# ARGO.
 ##
 
 
-gym.register(
-    id="LORL-Go1Argo-RL-v0",
-    entry_point="isaaclab.envs:ManagerBasedRLEnv",
-    disable_env_checker=True,
-    kwargs={
-        "env_cfg_entry_point": f"{velocity.__name__}.go1.argo_rl_env_cfg:Go1ArgoEnvCfg",
-        "skrl_cfg_entry_point": f"{velocity.__name__}.go1.agents:skrl_argo_ppo_cfg.yaml",
-    },
-)
+def register_argo(id_postfix: str, cfg_name: str):
+    register_manager_based_env(
+        id="LORL-Go1Argo-RL-" + id_postfix,
+        env_cfg=f"{velocity.__name__}.go1.argo_rl_env_cfg:" + cfg_name,
+        skrl_cfg=f"{velocity.__name__}.go1.agents:skrl_argo_ppo_cfg.yaml",
+    )
 
-gym.register(
-    id="LORL-Go1Argo-RL-Play-v0",
-    entry_point="isaaclab.envs:ManagerBasedRLEnv",
-    disable_env_checker=True,
-    kwargs={
-        "env_cfg_entry_point": f"{velocity.__name__}.go1.argo_rl_env_cfg:Go1ArgoEnvCfg_PLAY",
-        "skrl_cfg_entry_point": f"{velocity.__name__}.go1.agents:skrl_argo_ppo_cfg.yaml",
-    },
-)
 
-gym.register(
-    id="LORL-Go1ArgoH-RL-v0",
-    entry_point="isaaclab.envs:ManagerBasedRLEnv",
-    disable_env_checker=True,
-    kwargs={
-        "env_cfg_entry_point": f"{velocity.__name__}.go1.argo_rl_env_cfg:Go1ArgoHEnvCfg",
-        "skrl_cfg_entry_point": f"{velocity.__name__}.go1.agents:skrl_argo_ppo_cfg.yaml",
-    },
-)
+register_argo("v0", "Go1ArgoEnvCfg")
+register_argo("Play-v0", "Go1ArgoEnvCfg_PLAY")
 
-gym.register(
-    id="LORL-Go1ArgoH-RL-Play-v0",
-    entry_point="isaaclab.envs:ManagerBasedRLEnv",
-    disable_env_checker=True,
-    kwargs={
-        "env_cfg_entry_point": f"{velocity.__name__}.go1.argo_rl_env_cfg:Go1ArgoHEnvCfg_PLAY",
-        "skrl_cfg_entry_point": f"{velocity.__name__}.go1.agents:skrl_argo_ppo_cfg.yaml",
-    },
-)
-gym.register(
-    id="LORL-Go1Rough-RL-v0",
-    entry_point="isaaclab.envs:ManagerBasedRLEnv",
-    disable_env_checker=True,
-    kwargs={
-        "env_cfg_entry_point": f"{velocity.__name__}.go1.rough_rl_env_cfg:Go1RoughEnvCfg_v0",
-        "skrl_cfg_entry_point": f"{velocity.__name__}.go1.agents:skrl_rough_ppo_cfg.yaml",
-    },
-)
+register_argo("H15-v0", "Go1ArgoHEnvCfg")
+register_argo("H15-Play-v0", "Go1ArgoHEnvCfg_PLAY")
 
-gym.register(
-    id="LORL-Go1Rough-RL-Play-v0",
-    entry_point="isaaclab.envs:ManagerBasedRLEnv",
-    disable_env_checker=True,
-    kwargs={
-        "env_cfg_entry_point": f"{velocity.__name__}.go1.rough_rl_env_cfg:Go1RoughEnvCfg_v0_PLAY",
-        "skrl_cfg_entry_point": f"{velocity.__name__}.go1.agents:skrl_rough_ppo_cfg.yaml",
-    },
-)
-gym.register(
-    id="LORL-Go1Rough-RL-Play-ICRA-v0",
-    entry_point="isaaclab.envs:ManagerBasedRLEnv",
-    disable_env_checker=True,
-    kwargs={
-        "env_cfg_entry_point": f"{velocity.__name__}.go1.rough_rl_env_cfg:Go1RoughEnvCfg_v0_PLAY_ICRA",
-        "skrl_cfg_entry_point": f"{velocity.__name__}.go1.agents:skrl_rough_ppo_cfg.yaml",
-    },
-)
-gym.register(
-    id="LORL-Go1Direction-RL-v0",
-    entry_point="isaaclab.envs:ManagerBasedRLEnv",
-    disable_env_checker=True,
-    kwargs={
-        "env_cfg_entry_point": f"{direction.__name__}.go1.rough_rl_env_cfg:Go1RoughEnvCfg_v0",
-        "skrl_cfg_entry_point": f"{direction.__name__}.go1.agents:skrl_rough_ppo_cfg.yaml",
-    },
-)
 
-gym.register(
-    id="LORL-Go1Direction-RL-Play-v0",
-    entry_point="isaaclab.envs:ManagerBasedRLEnv",
-    disable_env_checker=True,
-    kwargs={
-        "env_cfg_entry_point": f"{direction.__name__}.go1.rough_rl_env_cfg:Go1RoughEnvCfg_v0_PLAY",
-        "skrl_cfg_entry_point": f"{direction.__name__}.go1.agents:skrl_rough_ppo_cfg.yaml",
-    },
-)
-gym.register(
-    id="LORL-Go1Direction-RL-Play-ICRA-v0",
-    entry_point="isaaclab.envs:ManagerBasedRLEnv",
-    disable_env_checker=True,
-    kwargs={
-        "env_cfg_entry_point": f"{direction.__name__}.go1.rough_rl_env_cfg:Go1RoughEnvCfg_v0_PLAY_ICRA",
-        "skrl_cfg_entry_point": f"{direction.__name__}.go1.agents:skrl_rough_ppo_cfg.yaml",
-    },
-)
+##
+# Velocity based rough.
+##
+
+
+def register_rough(id_postfix: str, env_cfg: str, skrl_cfg: str):
+    register_manager_based_env(
+        id="LORL-Go1Rough-RL-" + id_postfix,
+        env_cfg=f"{velocity.__name__}.go1.rough.env_cfg:" + env_cfg,
+        skrl_cfg=f"{velocity.__name__}.go1.rough.agents:" + skrl_cfg,
+    )
+
+
+register_rough("v0", "Go1RoughEnvCfg_v0", "skrl_rough_ppo_cfg.yaml")
+register_rough("Play-v0", "Go1RoughEnvCfg_v0_PLAY", "skrl_rough_ppo_cfg.yaml")
+register_rough("Play-ICRA-v0", "Go1RoughEnvCfg_v0_PLAY_ICRA", "skrl_rough_ppo_cfg.yaml")
+
+register_rough("LongArch-v0", "Go1RoughEnvCfg_v0", "skrl_rough_ppo_cfg_long.yaml")
+register_rough("LongArch-Play-v0", "Go1RoughEnvCfg_v0_PLAY", "skrl_rough_ppo_cfg_long.yaml")
+register_rough("LongArch-Play-ICRA-v0", "Go1RoughEnvCfg_v0_PLAY_ICRA", "skrl_rough_ppo_cfg_long.yaml")
+
+register_rough("WideArch-v0", "Go1RoughEnvCfg_v0", "skrl_rough_ppo_cfg_wide.yaml")
+register_rough("WideArch-Play-v0", "Go1RoughEnvCfg_v0_PLAY", "skrl_rough_ppo_cfg_wide.yaml")
+register_rough("WideArch-Play-ICRA-v0", "Go1RoughEnvCfg_v0_PLAY_ICRA", "skrl_rough_ppo_cfg_wide.yaml")
+
+
+##
+# Velocity based rough with long observation history.
+##
+
+
+def register_rough_lh(id_postfix: str, env_cfg: str, skrl_cfg: str):
+    register_manager_based_env(
+        id="LORL-Go1RoughLongHistory-RL-" + id_postfix,
+        env_cfg=f"{velocity.__name__}.go1.rough_long_history.env_cfg:" + env_cfg,
+        skrl_cfg=f"{velocity.__name__}.go1.rough_long_history.agents:" + skrl_cfg,
+    )
+
+
+register_rough("v0", "Go1RoughLongHistoryEnvCfg_v0", "skrl_rough_ppo_cfg.yaml")
+register_rough("Play-v0", "Go1RoughLongHistoryEnvCfg_v0_PLAY", "skrl_rough_ppo_cfg.yaml")
+register_rough("Play-ICRA-v0", "Go1RoughLongHistoryEnvCfg_v0_PLAY_ICRA", "skrl_rough_ppo_cfg.yaml")
+
+
+##
+# Direction based rough.
+##
+
+
+def register_dir(id_postfix: str, env_cfg: str, skrl_cfg: str):
+    register_manager_based_env(
+        id="LORL-Go1RoughDir-RL-" + id_postfix,
+        env_cfg=f"{direction.__name__}.go1.rough_rl_env_cfg:" + env_cfg,
+        skrl_cfg=f"{direction.__name__}.go1.rough.agents:" + skrl_cfg,
+    )
+
+
+register_rough("v0", "Go1RoughEnvCfg_v0", "skrl_rough_ppo_cfg.yaml")
+register_rough("Play-v0", "Go1RoughEnvCfg_v0_PLAY", "skrl_rough_ppo_cfg.yaml")
+register_rough("Play-ICRA-v0", "Go1RoughEnvCfg_v0_PLAY_ICRA", "skrl_rough_ppo_cfg.yaml")

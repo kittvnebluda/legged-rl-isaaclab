@@ -111,7 +111,6 @@ class RewardsCfg:
     # -- optional penalties
     flat_orientation_l2 = RewTerm(func=mdp.flat_orientation_l2, weight=-2.5)
     dof_pos_limits = RewTerm(func=mdp.joint_pos_limits, weight=0.0)
-    terrain_levels_mean = RewTerm(func=mdp.terrain_levels_mean, weight=0.1)
 
 
 @configclass

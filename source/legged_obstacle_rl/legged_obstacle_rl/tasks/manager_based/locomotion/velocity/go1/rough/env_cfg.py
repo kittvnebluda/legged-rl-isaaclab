@@ -21,10 +21,9 @@ class Go1RoughEnvCfg_v0(VelocityRLEnvCfg):
         self.events.physics_material.params["static_friction_range"] = (0.6, 1.5)
         self.events.physics_material.params["dynamic_friction_range"] = (0.6, 1.0)
 
-        self.rewards.undesired_contacts = None
         self.rewards.track_height = None
         self.rewards.feet_air_time.weight = 0.01
-        self.rewards.flat_orientation_l2.weight = -0.1
+        self.rewards.flat_orientation_l2.weight = -0.05
 
         self.observations.policy.height_command = None
 
