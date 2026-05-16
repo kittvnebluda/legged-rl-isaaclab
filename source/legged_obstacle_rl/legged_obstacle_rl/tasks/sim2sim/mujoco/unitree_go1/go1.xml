@@ -6,10 +6,10 @@
     <default>
         <default class="go1">
             <geom friction="0.6" margin="0.001" condim="1" />
-            <joint axis="0 1 0" damping="3" armature="0.01" frictionloss="0.2" />
+            <joint axis="0 1 0" damping="0" armature="0.01" frictionloss="0.2" />
             <general forcerange="-23.7 23.7" />
             <default class="abduction">
-                <joint axis="1 0 0" damping="3" range="-0.863 0.863" />
+                <joint axis="1 0 0" range="-0.863 0.863" />
             </default>
             <default class="hip">
                 <joint range="-0.686 4.501" />
@@ -59,7 +59,7 @@
                 <default class="foot">
                     <geom type="sphere" size="0.023" pos="0 0 -0.213" priority="1"
                         solref="0.005 1" solimp="0.9 0.95 0.001"
-                        condim="6" friction="0.8 0.02 0.01" />
+                        condim="6" friction="0.6 0.02 0.01" />
                 </default>
             </default>
         </default>
@@ -238,6 +238,7 @@
     <keyframe>
         <key name="home"
             qpos="0 0 0.4 1 0 0 0 0.1 0.8 -1.5 -0.1 0.8 -1.5 0.1 1.0 -1.5 -0.1 1.0 -1.5"
-            ctrl="0.1 0.8 -1.5 -0.1 0.8 -1.5 0.1 1.0 -1.5 -0.1 1.0 -1.5" />
+            ctrl="0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0" />
+        <!-- ctrl="0.1 0.8 -1.5 -0.1 0.8 -1.5 0.1 1.0 -1.5 -0.1 1.0 -1.5" /> -->
     </keyframe>
 </mujoco>

@@ -21,6 +21,8 @@ from legged_obstacle_rl.tasks.sim2sim.mujoco.utils import (
     quat_apply_inverse,
 )
 
+ISAAC_OFFSET = 0.5
+
 
 class Go1RoughEnv(MujocoEnv):
     metadata = {"render_modes": ["human"]}
@@ -113,8 +115,8 @@ class Go1RoughEnv(MujocoEnv):
                 raise ValueError("ActuatorNetMLP returned None in joint_efforts")
 
             efforts_mj = target_articulation.joint_efforts.squeeze(0).detach().numpy()[isaac_to_mujoco_joints]
-            self.data.ctrl[:] = efforts_mj
 
+            self.data.ctrl[:] = efforts_mj
             mujoco.mj_step(self.model, self.data)
 
     def _get_obs(self):
@@ -139,7 +141,7 @@ class Go1RoughEnv(MujocoEnv):
         return obs
 
     def reset_model(self):
-        self.actions = [isaac_home_jpos.copy()]
+        self.actions = [isaac_home_jpos.copy()] * self.MAX_ACTIONS_LEN
         self._ep_start_time = copy(self.data.time)
 
         qpos = np.concatenate([np.array([0, 0, 0.4, 1, 0, 0, 0]), isaac_home_jpos[isaac_to_mujoco_joints]])
@@ -157,7 +159,6 @@ class Go1RoughEnv(MujocoEnv):
             f"CMD VX: {self.vel_cmd[0]:8.3f} m/s    ACTUAL VX: {lv[0]:8.3f} m/s",
             f"CMD VY: {self.vel_cmd[1]:8.3f} m/s    ACTUAL VY: {lv[1]:8.3f} m/s",
             f"CMD WZ: {self.vel_cmd[2]:8.3f} rad/s  ACTUAL WZ: {lv[2]:8.3f} rad/s",
-            f"CMD Z : {self.z_cmd:8.3f} m      ACTUAL Z : {self.data.qpos[2]:8.3f} m",
             "------------------------------------",
             "",
         ]
@@ -180,7 +181,12 @@ class Go1RoughEnv(MujocoEnv):
         yaw_mat = np.array([[cos_y, -sin_y, 0], [sin_y, cos_y, 0], [0, 0, 1]])
 
         local_origins = np.stack(
-            [self.hs_xv.flatten(), self.hs_yv.flatten(), np.full_like(self.hs_xv.flatten(), self.HS_OFFSET_Z)], axis=-1
+            [
+                self.hs_xv.flatten(),
+                self.hs_yv.flatten(),
+                np.full_like(self.hs_xv.flatten(), self.HS_OFFSET_Z),
+            ],
+            axis=-1,
         )
 
         world_origins = body_pos + local_origins @ yaw_mat.T
@@ -201,7 +207,8 @@ class Go1RoughEnv(MujocoEnv):
                 geom_id,
             )
 
-            val = dist - self.HS_OFFSET_Z
+            ground = origin[2] - dist
+            val = body_pos[2] + ground - ISAAC_OFFSET
             distances.append(np.clip(val, -1.0, 1.0))
 
         return np.array(distances)
