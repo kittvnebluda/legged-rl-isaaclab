@@ -1,4 +1,4 @@
-# Unitree Go1 — Rough Terrain RL in IsaacLab
+# Legged Obstacle RL in IsaacLab
 
 ## Overview
 
@@ -7,9 +7,9 @@ Reinforcement learning for the Unitree Go1 quadruped on rough terrain, using [Is
 **Features:**
 
 - Velocity-commanded and direction-commanded locomotion policies
-- Curriculum over 8 procedurally generated terrain types
-- MuJoCo sim2sim deployment with learned actuator model from [walk-these-ways](https://github.com/Improbable-AI/walk-these-ways)
-- Keyboard teleop in both IsaacLab (play) and MuJoCo (deploy_mujoco)
+- Curriculum over 8 generated terrain types
+- MuJoCo sim2sim deployment
+- Keyboard teleop
 - TensorBoard logging
 
 **Keywords:** unitree, go1, aliengo, isaaclab, rsl_rl, skrl, legged-robotics, sim2sim, mujoco
@@ -80,6 +80,21 @@ python scripts/rsl_rl/train.py \
     --max_iterations 1500 \
     --run_name teacher \
     --headless
+```
+
+Resume a teacher:
+
+```bash
+  python scripts/rsl_rl/train.py \
+      --task LORL-AlienGoDirection-RL-v0 \
+      --num_envs 8192 \
+      --max_iterations 1500 \
+      --run_name teacher \
+      --headless \
+      --resume \
+      --load_run 2026-06-16_14-25-03_teacher_kadupul \
+      --checkpoint model_1499.pt \
+      --seed -1
 ```
 
 Writes checkpoints to `logs/rsl_rl/aliengo_direction/<timestamp>_teacher/`.
