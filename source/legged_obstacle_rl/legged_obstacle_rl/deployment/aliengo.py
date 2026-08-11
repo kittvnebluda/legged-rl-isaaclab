@@ -24,7 +24,7 @@ from .obs_log import log_step
 sdk = _common.load_sdk()
 
 # PD regulator
-KP = 51.0
+KP = 46.0
 KD = 2.0
 
 # Connection
@@ -80,7 +80,7 @@ def act_rsl_rl(policy, obs: np.ndarray) -> np.ndarray:
     with torch.inference_mode():
         obs_t = torch.as_tensor(obs, dtype=torch.float32).unsqueeze(0)
         actions = policy(obs_t).squeeze(0).numpy()
-    actions = np.zeros_like(actions)  # safe bringup — remove to drive joints
+    # actions = np.zeros_like(actions)  # safe bringup — remove to drive joints
     log_step(obs, actions)  # no-op unless LORL_OBS_LOG is set
     return actions
 
