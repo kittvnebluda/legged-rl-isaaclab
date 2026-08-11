@@ -17,7 +17,7 @@ class Go1DirectionDistillationRunnerCfg(RslRlDistillationRunnerCfg):
     experiment_name = "go1_direction"
     obs_groups = {"student": ["policy"], "teacher": ["policy", "privilliged"]}
     student = RslRlRNNModelCfg(
-        hidden_dims=[512, 256, 128],
+        hidden_dims=[512, 256, 256, 128],
         activation="elu",
         obs_normalization=True,
         distribution_cfg=RslRlMLPModelCfg.GaussianDistributionCfg(init_std=0.1),
@@ -26,7 +26,7 @@ class Go1DirectionDistillationRunnerCfg(RslRlDistillationRunnerCfg):
         rnn_num_layers=1,
     )
     teacher = RslRlMLPModelCfg(
-        hidden_dims=[512, 256, 128],
+        hidden_dims=[512, 256, 256, 128],
         activation="elu",
         obs_normalization=True,
         distribution_cfg=RslRlMLPModelCfg.GaussianDistributionCfg(init_std=0.0),

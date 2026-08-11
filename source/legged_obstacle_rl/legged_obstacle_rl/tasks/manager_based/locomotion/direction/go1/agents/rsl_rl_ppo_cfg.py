@@ -17,13 +17,13 @@ class PPORunnerCfg(RslRlOnPolicyRunnerCfg):
     experiment_name = "go1_direction"
     obs_groups = {"actor": ["policy", "privilliged"], "critic": ["policy", "privilliged"]}
     actor = RslRlMLPModelCfg(
-        hidden_dims=[512, 256, 128],
+        hidden_dims=[512, 256, 256, 128],
         activation="elu",
         obs_normalization=True,
         distribution_cfg=RslRlMLPModelCfg.GaussianDistributionCfg(init_std=1.0),
     )
     critic = RslRlMLPModelCfg(
-        hidden_dims=[512, 256, 128],
+        hidden_dims=[512, 256, 256, 128],
         activation="elu",
         obs_normalization=True,
     )
