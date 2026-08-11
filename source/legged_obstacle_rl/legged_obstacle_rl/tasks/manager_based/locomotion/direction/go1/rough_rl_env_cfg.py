@@ -1,5 +1,6 @@
 import isaaclab.sim as sim_utils
 from isaaclab.assets import AssetBaseCfg
+from isaaclab.managers import EventTermCfg as EventTerm
 from isaaclab.managers import ObservationGroupCfg as ObsGroup
 from isaaclab.managers import ObservationTermCfg as ObsTerm
 from isaaclab.managers import RewardTermCfg as RewTerm
@@ -50,6 +51,11 @@ class ObservationsCfg:
     @configclass
     class PrivilligedCfg(ObsGroup):
         base_lin_vel = ObsTerm(func=mdp.base_lin_vel, noise=Unoise(n_min=-0.1, n_max=0.1))
+        foot_contacts = ObsTerm(
+            func=mdp.foot_contact_states,
+            params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_foot")},
+        )
+        # -- scans
         fl_foot_scan = ObsTerm(
             func=mdp.height_scan,
             params={"sensor_cfg": SceneEntityCfg("fl_foot_scanner")},
@@ -74,6 +80,11 @@ class ObservationsCfg:
             noise=Unoise(n_min=-0.1, n_max=0.1),
             clip=(-1.0, 1.0),
         )
+        # -- random states
+        actuator_gains = ObsTerm(
+            func=mdp.actuator_gains,
+            params={"asset_cfg": SceneEntityCfg("robot", joint_names=".*")},
+        )
         forces = ObsTerm(
             func=mdp.external_force_b,
             params={"asset_cfg": SceneEntityCfg("robot", body_names="trunk")},
@@ -82,10 +93,7 @@ class ObservationsCfg:
             func=mdp.external_torque_b,
             params={"asset_cfg": SceneEntityCfg("robot", body_names="trunk")},
         )
-        foot_contacts = ObsTerm(
-            func=mdp.foot_contact_states,
-            params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_foot")},
-        )
+        actuator_delay = ObsTerm(func=mdp.actuator_delay)
 
         def __post_init__(self):
             self.enable_corruption = False
@@ -123,6 +131,11 @@ class RewardsCfg:
         func=mdp.undesired_contacts,
         weight=-1.0,
         params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_thigh"), "threshold": 1.0},
+    )
+    base_undesired_contact = RewTerm(
+        func=mdp.undesired_contacts_when_command_nonzero,
+        weight=-2.0,
+        params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names="trunk"), "threshold": 1.0},
     )
     action_rate_l2 = RewTerm(func=mdp.action_rate_l2, weight=-3.0e-3)
     feet_slide = RewTerm(
@@ -162,6 +175,31 @@ class Go1RoughEnvCfg_v0(DirectionRLEnvCfg):
         self.events.physics_material.params["static_friction_range"] = (0.6, 1.5)
         self.events.physics_material.params["dynamic_friction_range"] = (0.6, 1.0)
 
+        self.events.actuator_gains = EventTerm(
+            func=mdp.randomize_actuator_gains,
+            mode="startup",
+            params={
+                "asset_cfg": SceneEntityCfg("robot", joint_names=".*"),
+                "stiffness_distribution_params": (0.7, 1.3),
+                "damping_distribution_params": (0.7, 1.3),
+                "operation": "scale",
+                "distribution": "uniform",
+            },
+        )
+        self.events.joint_params = EventTerm(
+            func=mdp.randomize_joint_parameters,
+            mode="startup",
+            params={
+                "asset_cfg": SceneEntityCfg("robot", joint_names=".*"),
+                "friction_distribution_params": (0.0, 0.4),
+                "armature_distribution_params": (0.0, 0.05),
+                "operation": "abs",
+                "distribution": "uniform",
+            },
+        )
+
+        self.terminations.base_contact = None
+
 
 @configclass
 class Go1RoughEnvCfg_v0_PLAY(Go1RoughEnvCfg_v0):
@@ -182,6 +220,10 @@ class Go1RoughEnvCfg_v0_PLAY(Go1RoughEnvCfg_v0):
         self.events.base_external_force_torque = None
         self.events.physics_material.params["static_friction_range"] = (0.8, 0.8)
         self.events.physics_material.params["dynamic_friction_range"] = (0.6, 0.6)
+        self.events.actuator_gains.params["stiffness_distribution_params"] = (1.0, 1.0)
+        self.events.actuator_gains.params["damping_distribution_params"] = (1.0, 1.0)
+        self.events.joint_params.params["friction_distribution_params"] = (0.2, 0.2)
+        self.events.joint_params.params["armature_distribution_params"] = (0.02, 0.02)
 
 
 @configclass
