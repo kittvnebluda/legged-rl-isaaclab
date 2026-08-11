@@ -14,6 +14,7 @@ register("LORL-Go1-Velocity-Flat-MJ-v0", "go1.velocity_env:Go1VelocityFlatEnv")
 register("LORL-Go1-Velocity-HField-MJ-v0", "go1.velocity_env:Go1VelocityHFieldEnv")
 
 # Direction Policy
+register("LORL-Go1-Direction-MJ-v0", "go1.direction_env:Go1DirectionEnv")
 register("LORL-Aliengo-Direction-MJ-v0", "aliengo.direction_env:AliengoDirectionProprioEnv")
 register("LORL-Aliengo-Direction-ICRA-Flat-MJ-v0", "aliengo.direction_env:AliengoDirectionProprioIcraFlatEnv")
 register("LORL-Aliengo-Direction-ICRA-Sloped-MJ-v0", "aliengo.direction_env:AliengoDirectionProprioIcraSlopedEnv")
