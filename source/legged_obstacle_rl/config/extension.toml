@@ -11,7 +11,7 @@ title = "Legged Obstacle RL"
 author = "Grigorii Sizikov"
 maintainer = "Grigorii Sizikov"
 description = "Unitree Go1 rough-terrain RL (IsaacLab + skrl) with MuJoCo sim2sim and real-robot deployment."
-repository = "https://github.com/kittnablude/legged-rl-isaaclab"
+repository = "https://github.com/kittvnebluda/lorl_isaaclab"
 keywords = [
     "unitree",
     "go1",

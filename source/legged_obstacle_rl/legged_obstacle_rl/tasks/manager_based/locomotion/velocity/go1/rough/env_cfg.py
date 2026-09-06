@@ -1,6 +1,7 @@
 import isaaclab.sim as sim_utils
 from isaaclab.assets import AssetBaseCfg
 from isaaclab.utils import configclass
+from legged_obstacle_rl.assets import ICRA_MAP_FLAT_USD
 from legged_obstacle_rl.robots.unitree import GO1_CFG as UNITREE_GO1_CFG
 
 from legged_obstacle_rl.tasks.manager_based.locomotion.velocity.velocity_env_cfg import VelocityRLEnvCfg
@@ -85,7 +86,7 @@ class Go1RoughEnvCfg_v0_PLAY_ICRA(Go1RoughEnvCfg_v0):
         self.scene.terrain = AssetBaseCfg(
             prim_path="/World/ground",
             spawn=sim_utils.UsdFileCfg(
-                usd_path="/home/litt/Projects/legged-rl-isaaclab/source/legged_obstacle_rl/legged_obstacle_rl/assets/icra_map_flat.usd",
+                usd_path=ICRA_MAP_FLAT_USD,
                 collision_props=sim_utils.CollisionPropertiesCfg(contact_offset=0.1),
             ),
         )

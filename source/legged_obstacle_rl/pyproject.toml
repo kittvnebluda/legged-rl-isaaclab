@@ -13,7 +13,7 @@ extraPaths = [
     "/home/litt/IsaacLab/source/isaaclab_contrib/",
     "/home/litt/IsaacLab/source/isaaclab_mimic/",
     "/home/litt/IsaacLab/source/isaaclab_rl/",
-    "/home/litt/Projects/legged-rl-isaaclab/typings/",
+    "../../typings/",
 ]
 reportPrivateImportUsage = "none"
 reportMissingModuleSource = "none" # -> most common: prettytable in mdp managers
