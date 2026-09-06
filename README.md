@@ -2,11 +2,12 @@
 
 ## Overview
 
-Reinforcement learning for the Unitree Go1 quadruped on rough terrain, using [IsaacLab](https://isaac-sim.github.io/IsaacLab) for training and [skrl](https://skrl.readthedocs.io) as the RL library. Includes a MuJoCo sim-to-sim transfer pipeline and keyboard teleop for interactive evaluation.
+Reinforcement learning for the Unitree Go1 and AlienGo quadrupeds on rough terrain, using [IsaacLab](https://isaac-sim.github.io/IsaacLab) for training with two interchangeable RL libraries: [skrl](https://skrl.readthedocs.io) and [rsl_rl](https://github.com/leggedrobotics/rsl_rl). Includes a MuJoCo sim-to-sim transfer pipeline and keyboard teleop for interactive evaluation.
 
 **Features:**
 
 - Velocity-commanded and direction-commanded locomotion policies
+- PPO training with skrl or rsl_rl, plus teacher-student distillation (rsl_rl)
 - Curriculum over 8 generated terrain types
 - MuJoCo sim2sim deployment
 - Keyboard teleop
@@ -49,137 +50,12 @@ URL --- nothing breaks before the download. Re-run with `--force` to refresh.
 
 ## Scripts
 
-### Train (skrl)
+Training, play and MuJoCo sim2sim commands live in
+**[docs/scripts.md](docs/scripts.md)**:
 
-```bash
-python scripts/skrl/train.py \
-    --task=LORL-Go1Rough-RL-v0 \
-    [--num_envs 4096] \
-    [--checkpoint PATH] \
-    [--max_iterations 1500] \
-    [--video] [--video_length 200] \
-    [--seed 42] \
-    [--algorithm PPO]
-```
-
-Logs to `logs/skrl/` and `outputs/`. TensorBoard metrics include velocity
-tracking, terrain level, and custom hyperparameters.
-
-### Teacher–Student Training (rsl_rl)
-
-Two-phase privileged-learning + distillation for the AlienGo direction task.
-Phase A trains a privileged teacher with PPO; Phase B distills it into
-a proprioception-only GRU student via DAgger. Both phases log under `logs/rsl_rl/aliengo_direction/`.
-
-**Phase A — teacher (privileged PPO, symmetry augmentation, clean observations):**
-
-```bash
-python scripts/rsl_rl/train.py \
-    --task LORL-AlienGoDirection-RL-v0 \
-    --num_envs 4096 \
-    --max_iterations 1500 \
-    --run_name teacher \
-    --headless
-```
-
-Resume a teacher:
-
-```bash
-  python scripts/rsl_rl/train.py \
-      --task LORL-AlienGoDirection-RL-v0 \
-      --num_envs 8192 \
-      --max_iterations 1500 \
-      --run_name teacher \
-      --headless \
-      --resume \
-      --load_run 2026-06-16_14-25-03_teacher_kadupul \
-      --checkpoint model_1499.pt \
-      --seed -1
-```
-
-Writes checkpoints to `logs/rsl_rl/aliengo_direction/<timestamp>_teacher/`.
-
-**Phase B — student (GRU DAgger distillation, noisy proprioception):**
-
-```bash
-python scripts/rsl_rl/train.py \
-    --task LORL-AlienGoDirection-RL-Distill-v0 \
-    --agent rsl_rl_distillation_cfg_entry_point \
-    --num_envs 4096 \
-    --max_iterations 1000 \
-    --load_run <timestamp>_teacher \
-    --checkpoint model_1499.pt \
-    --run_name student \
-    --headless
-```
-
-`--agent rsl_rl_distillation_cfg_entry_point` selects the distillation runner; `--load_run`
-and `--checkpoint` point at the Phase A teacher (resolved within the shared
-`aliengo_direction` experiment root). The student imitates the teacher's actions
-while acting on corrupted proprioception.
-
-### Play  (skrl)
-
-```bash
-python scripts/skrl/play.py \
-    --task=LORL-Go1Rough-RL-Play-v0 \
-    --checkpoint PATH \
-    [--num_envs 50] \
-    [--teleop] \
-    [--real-time]
-```
-
-`--teleop` enables keyboard control (see [Teleop Controls](#teleop-controls)).
-
-### Play (rsl_rl)
-
-Teacher:
-
-```bash
-python scripts/rsl_rl/play.py
-    --task LORL-AlienGoDirection-RL-Play-v0 \
-    --checkpoint logs/rsl_rl/aliengo_direction/<date-time>_teacher/model_X.pt \
-    [--num_envs 50] \
-    [--teleop] \
-    [--real-time]
-```
-
-Student:
-
-```bash
-python scripts/rsl_rl/play.py
-    --task LORL-AlienGoDirection-RL-Play-v0 \
-    --agent rsl_rl_distillation_cfg_entry_point \
-    --checkpoint logs/rsl_rl/aliengo_direction/<date-time>_student/model_X.pt \
-    [--num_envs 50] \
-    [--teleop] \
-    [--real-time]
-```
-
-`--teleop` enables keyboard control (see [Teleop Controls](#teleop-controls)).
-
-### Deploy to MuJoCo
-
-skrl:
-
-```bash
-python scripts/skrl/deploy_mujoco.py \
-    --task=LORL-Go1Rough-MJ-v0 \
-    --checkpoint PATH \
-    --teleop \
-    --real-time \
-    [--config path/to/agent_cfg.yaml]
-```
-
-rsl_rl:
-
-```bash
-python scripts/rsl_rl/deploy_mujoco.py \
-    --task LORL-Aliengo-Direction-MJ-v0 \
-    --checkpoint logs/rsl_rl/aliengo_direction/<date-time>_student/exported/policy.pt \
-    --real-time \
-    --teleop
-```
+- Train --- [skrl](docs/scripts.md#train-skrl) / [teacher-student (rsl_rl)](docs/scripts.md#teacherstudent-training-rsl_rl)
+- Play --- [skrl](docs/scripts.md#play--skrl) / [rsl_rl](docs/scripts.md#play-rsl_rl)
+- [Deploy to MuJoCo](docs/scripts.md#deploy-to-mujoco)
 
 ## Teleop Controls
 
@@ -199,35 +75,6 @@ Requires Linux evdev python package.
 
 ```bash
 pip install gymnasium[mujoco]
-```
-
-## ROS2 / Gazebo
-
-> **Status: work in progress — ROS2 deployment not yet functional.**
-
-A ROS2 workspace is located at `source/legged_obstacle_rl/legged_obstacle_rl/tasks/ros2_ws/`
-with packages for bringup, description, and Gazebo simulation.
-
-Install Gazebo Harmonic:
-
-```bash
-sudo apt-get update
-sudo apt-get install lsb-release wget gnupg
-
-sudo wget https://packages.osrfoundation.org/gazebo.gpg -O /usr/share/keyrings/pkgs-osrf-archive-keyring.gpg
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/pkgs-osrf-archive-keyring.gpg] http://packages.osrfoundation.org/gazebo/ubuntu-stable $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/gazebo-stable.list > /dev/null
-
-sudo apt-get update
-sudo apt-get install gz-harmonic ros-humble-ros-gzharmonic
-
-echo 'export GZ_VERSION=harmonic' >> ~/.bashrc
-source ~/.bashrc
-```
-
-Verify:
-
-```bash
-gz sim
 ```
 
 ## Troubleshooting
