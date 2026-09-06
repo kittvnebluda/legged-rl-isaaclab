@@ -1,5 +1,9 @@
 # Legged Obstacle RL in IsaacLab
 
+https://github.com/user-attachments/assets/4472571f-2608-4d7c-aa88-cbe50b9c6cee
+
+https://github.com/user-attachments/assets/e984d1f4-0f13-4465-9e0d-f9138e1c4f54
+
 ## Overview
 
 Reinforcement learning for the Unitree Go1 and AlienGo quadrupeds on rough terrain, using [IsaacLab](https://isaac-sim.github.io/IsaacLab) for training with two interchangeable RL libraries: [skrl](https://skrl.readthedocs.io) and [rsl_rl](https://github.com/leggedrobotics/rsl_rl). Includes a MuJoCo sim-to-sim transfer pipeline and keyboard teleop for interactive evaluation.
